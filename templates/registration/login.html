@@ -1,0 +1,33 @@
+{% extends "base.html" %}
+{% load static %}
+{% load i18n %}
+
+{% block title %}{% trans 'Вход в систему' %}{% endblock %}
+
+{% block content %}
+    <h2>{% trans 'Вход в систему' %}</h2>
+
+    {% if form.errors %}
+        <p style="color:red;">{% trans 'Ваше имя пользователя и пароль не совпали. Пожалуйста, попробуйте еще раз.' %}</p>
+    {% endif %}
+
+    <form method="post" action="{% url 'login' %}">
+        {% csrf_token %}
+        <p>
+            {{ form.username.label_tag }}
+            {{ form.username }}
+        </p>
+
+        <p>
+            {{ form.password.label_tag }}
+            {{ form.password }}
+        </p>
+
+        <button type="submit">{% trans 'Войти' %}</button>
+
+        <input type="hidden" name="next" value="{{ next }}">
+    </form>
+
+    {# TODO: Надо добавить сброс пароля по ссылке ниже #}
+    {# <p><a href="{% url 'password_reset' %}">{% trans 'Забыли пароль?' %}</a></p> #}
+{% endblock %}
