@@ -210,8 +210,8 @@ APP_EMAIL = os.getenv('APP_EMAIL', 'example@mail.com')
 NCBI_API_KEY = os.getenv('NCBI_API_KEY', '') # PubMed
 
 
-OPENAI_API_KEY = os.getenv('OPENAI_API_KEY', '')
-OPENAI_DEFAULT_MODEL = "gpt-4o-mini"
+# OPENAI_API_KEY = os.getenv('OPENAI_API_KEY', '')
+# OPENAI_DEFAULT_MODEL = "gpt-4o-mini"
 LLM_PROVIDER_FOR_ANALYSIS = 'Grok' # "OpenAI", "Anthropic" и т.д.
 
 

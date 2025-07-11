@@ -1395,7 +1395,7 @@ def fetch_data_from_pubmed_task(
                 )
                 pubmed_esearch_params = {**common_params, 'db': 'pubmed', 'term': f"{identifier_value}[DOI]", 'retmode': 'json'}
                 esearch_response = requests.get(f"{eutils_base}esearch.fcgi", params=pubmed_esearch_params, timeout=30)
-                print(f'*** DEBUG (fetch_data_from_pubmed_task) pubmed esearch_response: {esearch_response}')
+                print(f'*** DEBUG (fetch_data_from_pubmed_task) pubmed esearch_response: {esearch_response}, pubmed_esearch_params: {pubmed_esearch_params}')
                 # esearch_response.raise_for_status()
                 if esearch_response.status_code == 200:
                     pubmed_esearch_data = esearch_response.json()
