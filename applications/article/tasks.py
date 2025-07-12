@@ -6,7 +6,7 @@ import time
 import xml.etree.ElementTree as ET  # Для парсинга XML
 
 import requests
-# from openai import OpenAI
+from openai import OpenAI
 
 from celery import chord, group, shared_task
 from django.conf import settings
@@ -24,18 +24,18 @@ from .helpers import (
     download_pdf_from_pmc,
     download_pdf_from_scihub_box,
     extract_structured_text_from_jats,
-    parse_arxiv_authors,
+    # parse_arxiv_authors,
     parse_crossref_authors,
-    parse_europepmc_authors,
-    parse_openalex_authors,
+    # parse_europepmc_authors,
+    # parse_openalex_authors,
     # parse_pubmed_authors,
     parse_pubmed_authors_from_xml_metadata,
     # extract_text_from_jats_xml,
     # extract_text_from_bioc_json,
     parse_references_from_jats,
     parse_rxiv_authors,
-    parse_s2_authors,
-    reconstruct_abstract_from_inverted_index,
+    # parse_s2_authors,
+    # reconstruct_abstract_from_inverted_index,
     send_prompt_to_grok,
     send_user_notification,
 )
@@ -569,6 +569,7 @@ def process_data_task(
 
                                                     # Если у ссылки есть DOI, ставим в очередь на обработку
                                                     if ref_doi_jats:
+                                                        print(f"*** DEBUG (process_data_task) PUBMED ref_doi_jats: {ref_doi_jats}")
                                                         send_user_notification(
                                                             user_id,
                                                             task_id,
@@ -632,7 +633,6 @@ def process_data_task(
                                                 source_api=current_api_name
                                             )
 
-                                            print('*** DEBUG (process_data_task) rxvi: parse_references_from_jats')
                                             parsed_references = parse_references_from_jats(val)
                                             if parsed_references:
                                                 send_user_notification(
@@ -701,6 +701,7 @@ def process_data_task(
 
                                                     # Если у ссылки есть DOI, ставим в очередь на обработку
                                                     if ref_doi_jats:
+                                                        print(f"*** DEBUG (process_data_task) RXIV ref_doi_jats: {ref_doi_jats}")
                                                         send_user_notification(
                                                             user_id,
                                                             task_id,
@@ -2683,7 +2684,7 @@ def analyze_segment_with_llm_task(self, analyzed_segment_id: int, user_id: int):
     "analysis_notes": "Твой текстовый анализ здесь.",
     "veracity_score": число от 1 до 5 (например, 3 или 4.5)."""
 
-    print(f'segment.id: {segment.id}, PROMPT len: {len(prompt)}\n')
+    print(f'segment.id: {segment.id}, PROMPT len: {len(prompt)}, PROMPT words count: {len(prompt.split())} \n')
     print(prompt)
 
     send_user_notification(
@@ -2697,50 +2698,52 @@ def analyze_segment_with_llm_task(self, analyzed_segment_id: int, user_id: int):
     )
 
     llm_response_content = None
-    llm_model_used = getattr(settings, 'OPENAI_DEFAULT_MODEL', 'gpt-4o-mini')
+    llm_model_used = None
 
     try:
-        # if getattr(settings, 'LLM_PROVIDER_FOR_ANALYSIS', None) == "OpenAI" and settings.OPENAI_API_KEY:
-        #     client = OpenAI(api_key=settings.OPENAI_API_KEY)
-        #     # llm_model_used = "gpt-3.5-turbo" # или gpt-4o, gpt-4-turbo
+        if getattr(settings, 'LLM_PROVIDER_FOR_ANALYSIS', None) == "OpenAI" and settings.OPENAI_API_KEY:
+            client = OpenAI(api_key=settings.OPENAI_API_KEY)
+            # llm_model_used = "gpt-3.5-turbo" # или gpt-4o, gpt-4-turbo
+            llm_model_used = getattr(settings, 'OPENAI_DEFAULT_MODEL', 'gpt-4o-mini')
 
-        #     chat_completion = client.chat.completions.create(
-        #         model=llm_model_used,
-        #         messages=[
-        #             {
-        #                 "role": "system",
-        #                 "content": "Ты - внимательный научный ассистент, который анализирует текст и его источники и всегда отвечает в формате JSON."
-        #             },
-        #             {
-        #                 "role": "user",
-        #                 "content": prompt
-        #             }
-        #         ],
-        #         # temperature=0.3, # Более детерминированный ответ
-        #         response_format={"type": "json_object"} # Если используете GPT-4 Turbo или новее с поддержкой JSON mode
-        #     )
-        #     raw_llm_output = chat_completion.choices[0].message.content
-        #     print(f"***** raw_llm_output: {raw_llm_output}") # Для отладки
-        #     try:
-        #         llm_response_content = json.loads(raw_llm_output)
-        #     except json.JSONDecodeError:
-        #         json_match = re.search(r'\{.*\}', raw_llm_output, re.DOTALL)
-        #         if json_match:
-        #             try:
-        #                 llm_response_content = json.loads(json_match.group(0))
-        #             except json.JSONDecodeError:
-        #                 llm_response_content = {
-        #                     "analysis_notes": f"LLM вернул текст, но не удалось извлечь JSON: {raw_llm_output}",
-        #                     "veracity_score": None
-        #                 }
-        #         else:
-        #             llm_response_content = {
-        #                 "analysis_notes": f"LLM вернул не JSON ответ: {raw_llm_output}",
-        #                 "veracity_score": None
-        #             }
-        if getattr(settings, 'LLM_PROVIDER_FOR_ANALYSIS', None) == "Grok":
+            chat_completion = client.chat.completions.create(
+                model=llm_model_used,
+                messages=[
+                    {
+                        "role": "system",
+                        "content": "Ты - внимательный научный ассистент, который анализирует текст и его источники и всегда отвечает в формате JSON."
+                    },
+                    {
+                        "role": "user",
+                        "content": prompt
+                    }
+                ],
+                # temperature=0.3, # Более детерминированный ответ
+                response_format={"type": "json_object"} # Если используете GPT-4 Turbo или новее с поддержкой JSON mode
+            )
+            raw_llm_output = chat_completion.choices[0].message.content
+            print(f"***** OpenAI raw_llm_output: {raw_llm_output}") # Для отладки
+            try:
+                llm_response_content = json.loads(raw_llm_output)
+            except json.JSONDecodeError:
+                json_match = re.search(r'\{.*\}', raw_llm_output, re.DOTALL)
+                if json_match:
+                    try:
+                        llm_response_content = json.loads(json_match.group(0))
+                    except json.JSONDecodeError:
+                        llm_response_content = {
+                            "analysis_notes": f"LLM вернул текст, но не удалось извлечь JSON: {raw_llm_output}",
+                            "veracity_score": None
+                        }
+                else:
+                    llm_response_content = {
+                        "analysis_notes": f"LLM вернул не JSON ответ: {raw_llm_output}",
+                        "veracity_score": None
+                    }
+
+        elif getattr(settings, 'LLM_PROVIDER_FOR_ANALYSIS', None) == "Grok":
             raw_llm_output = send_prompt_to_grok(prompt) # Запрос к Grok
-            print(f"***** raw_llm_output: {raw_llm_output}") # Для отладки
+            print(f"***** Grok raw_llm_output: {raw_llm_output}") # Для отладки
 
             try:
                 if raw_llm_output:
@@ -2761,6 +2764,7 @@ def analyze_segment_with_llm_task(self, analyzed_segment_id: int, user_id: int):
                         "analysis_notes": f"LLM вернул не JSON ответ: {raw_llm_output}",
                         "veracity_score": None
                     }
+
         else:
             send_user_notification(
                 user_id,

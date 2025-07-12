@@ -11,7 +11,7 @@ channels-redis
 daphne
 psycopg2-binary
 django-admin-sortable2
-# openai
+openai
 python-dotenv
 # pytest-playwright
 # scidownl

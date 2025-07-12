@@ -137,44 +137,93 @@ def parse_pubmed_authors_from_xml_metadata(author_list_node):
     return parsed_authors
 
 
-def parse_europepmc_authors(authors_data_list):
-    parsed_authors = []
-    if not authors_data_list or not isinstance(authors_data_list, list):
-        return parsed_authors
-    for author_info_wrapper in authors_data_list:
-        if isinstance(author_info_wrapper, dict) and 'author' in author_info_wrapper:
-            for author_entry in author_info_wrapper['author']:
-                if isinstance(author_entry, dict) and 'fullName' in author_entry:
-                    full_name = author_entry['fullName'].strip()
-                    if full_name:
-                        author, _ = Author.objects.get_or_create(full_name=full_name)
-                        parsed_authors.append(author)
-    return parsed_authors
+# def parse_europepmc_authors(authors_data_list):
+#     parsed_authors = []
+#     if not authors_data_list or not isinstance(authors_data_list, list):
+#         return parsed_authors
+#     for author_info_wrapper in authors_data_list:
+#         if isinstance(author_info_wrapper, dict) and 'author' in author_info_wrapper:
+#             for author_entry in author_info_wrapper['author']:
+#                 if isinstance(author_entry, dict) and 'fullName' in author_entry:
+#                     full_name = author_entry['fullName'].strip()
+#                     if full_name:
+#                         author, _ = Author.objects.get_or_create(full_name=full_name)
+#                         parsed_authors.append(author)
+#     return parsed_authors
 
 
-def parse_s2_authors(authors_data_list):
-    parsed_authors = []
-    if not authors_data_list or not isinstance(authors_data_list, list):
-        return parsed_authors
-    for author_info in authors_data_list:
-        if isinstance(author_info, dict) and author_info.get('name'):
-            full_name = author_info['name'].strip()
-            if full_name:
-                author, _ = Author.objects.get_or_create(full_name=full_name)
-                parsed_authors.append(author)
-    return parsed_authors
+# def parse_s2_authors(authors_data_list):
+#     parsed_authors = []
+#     if not authors_data_list or not isinstance(authors_data_list, list):
+#         return parsed_authors
+#     for author_info in authors_data_list:
+#         if isinstance(author_info, dict) and author_info.get('name'):
+#             full_name = author_info['name'].strip()
+#             if full_name:
+#                 author, _ = Author.objects.get_or_create(full_name=full_name)
+#                 parsed_authors.append(author)
+#     return parsed_authors
 
 
-def parse_arxiv_authors(entry_element):
-    parsed_authors = []
-    for author_el in entry_element.findall('atom:author', ARXIV_NS):
-        name_el = author_el.find('atom:name', ARXIV_NS)
-        if name_el is not None and name_el.text:
-            full_name = name_el.text.strip()
-            if full_name:
-                author, _ = Author.objects.get_or_create(full_name=full_name)
-                parsed_authors.append(author)
-    return parsed_authors
+# def parse_arxiv_authors(entry_element):
+#     parsed_authors = []
+#     for author_el in entry_element.findall('atom:author', ARXIV_NS):
+#         name_el = author_el.find('atom:name', ARXIV_NS)
+#         if name_el is not None and name_el.text:
+#             full_name = name_el.text.strip()
+#             if full_name:
+#                 author, _ = Author.objects.get_or_create(full_name=full_name)
+#                 parsed_authors.append(author)
+#     return parsed_authors
+
+
+# def parse_openalex_authors(authorships_data: list) -> list:
+#     """Парсинг авторов из поля 'authorships' ответа OpenAlex API."""
+#     parsed_authors = []
+#     if not authorships_data or not isinstance(authorships_data, list):
+#         return parsed_authors
+
+#     # authorships обычно уже отсортированы по author_position
+#     for authorship in authorships_data:
+#         if isinstance(authorship, dict):
+#             author_info = authorship.get('author')
+#             if isinstance(author_info, dict) and author_info.get('display_name'):
+#                 full_name = author_info['display_name'].strip()
+#                 if full_name:
+#                     author, _ = Author.objects.get_or_create(full_name=full_name)
+#                     parsed_authors.append(author)
+#     return parsed_authors
+
+
+# def reconstruct_abstract_from_inverted_index(inverted_index: dict, abstract_length: int) -> str | None:
+#     """
+#     Восстанавливает текст аннотации из инвертированного индекса OpenAlex.
+#     :param inverted_index: Словарь инвертированного индекса.
+#     :param abstract_length: Ожидаемая длина аннотации в словах (из поля abstract_length).
+#     :return: Восстановленная строка аннотации или None.
+#     """
+#     if not inverted_index or not isinstance(inverted_index, dict) or abstract_length == 0:
+#         return None
+
+#     # Создаем список слов нужной длины
+#     abstract_words = [""] * abstract_length
+#     found_words = 0
+#     for word, positions in inverted_index.items():
+#         for pos in positions:
+#             if 0 <= pos < abstract_length:
+#                 abstract_words[pos] = word
+#                 found_words +=1
+
+#     # Если мы не смогли восстановить значительную часть слов, возможно, что-то не так
+#     # (например, abstract_length было неверным или индекс неполный)
+#     # В этом случае лучше вернуть None, чем неполный текст.
+#     # Простая эвристика: если заполнено менее 70% слов, считаем неудачей.
+#     if found_words < abstract_length * 0.7 and abstract_length > 10 : # Пропускаем проверку для очень коротких "абстрактов"
+#         # print(f"Warning: Reconstructed abstract seems incomplete. Expected {abstract_length} words, got {found_words} words from index.")
+#         # Можно вернуть ' '.join(filter(None, abstract_words)).strip() если хотим частичный результат
+#         return None
+
+#     return ' '.join(filter(None, abstract_words)).strip() # filter(None,...) убирает пустые строки, если не все позиции были заполнены
 
 
 def parse_rxiv_authors(authors_data_list):
@@ -281,55 +330,6 @@ def extract_structured_text_from_jats(xml_string: str) -> dict:
     except Exception as e_gen:
         print(f"Generic error in structured JATS parsing: {e_gen}")
     return {} # Возвращаем пустой словарь в случае ошибки
-
-
-def reconstruct_abstract_from_inverted_index(inverted_index: dict, abstract_length: int) -> str | None:
-    """
-    Восстанавливает текст аннотации из инвертированного индекса OpenAlex.
-    :param inverted_index: Словарь инвертированного индекса.
-    :param abstract_length: Ожидаемая длина аннотации в словах (из поля abstract_length).
-    :return: Восстановленная строка аннотации или None.
-    """
-    if not inverted_index or not isinstance(inverted_index, dict) or abstract_length == 0:
-        return None
-
-    # Создаем список слов нужной длины
-    abstract_words = [""] * abstract_length
-    found_words = 0
-    for word, positions in inverted_index.items():
-        for pos in positions:
-            if 0 <= pos < abstract_length:
-                abstract_words[pos] = word
-                found_words +=1
-
-    # Если мы не смогли восстановить значительную часть слов, возможно, что-то не так
-    # (например, abstract_length было неверным или индекс неполный)
-    # В этом случае лучше вернуть None, чем неполный текст.
-    # Простая эвристика: если заполнено менее 70% слов, считаем неудачей.
-    if found_words < abstract_length * 0.7 and abstract_length > 10 : # Пропускаем проверку для очень коротких "абстрактов"
-        # print(f"Warning: Reconstructed abstract seems incomplete. Expected {abstract_length} words, got {found_words} words from index.")
-        # Можно вернуть ' '.join(filter(None, abstract_words)).strip() если хотим частичный результат
-        return None
-
-    return ' '.join(filter(None, abstract_words)).strip() # filter(None,...) убирает пустые строки, если не все позиции были заполнены
-
-
-def parse_openalex_authors(authorships_data: list) -> list:
-    """Парсинг авторов из поля 'authorships' ответа OpenAlex API."""
-    parsed_authors = []
-    if not authorships_data or not isinstance(authorships_data, list):
-        return parsed_authors
-
-    # authorships обычно уже отсортированы по author_position
-    for authorship in authorships_data:
-        if isinstance(authorship, dict):
-            author_info = authorship.get('author')
-            if isinstance(author_info, dict) and author_info.get('display_name'):
-                full_name = author_info['display_name'].strip()
-                if full_name:
-                    author, _ = Author.objects.get_or_create(full_name=full_name)
-                    parsed_authors.append(author)
-    return parsed_authors
 
 
 def parse_references_from_jats(xml_string: str) -> list:
@@ -687,35 +687,37 @@ def send_prompt_to_grok(prompt):
                 time.sleep(10)
 
                 # Wait for the page to be fully loaded
-                page.wait_for_load_state("networkidle", timeout=30000)
-                print("*** DEBUG (send_prompt_to_grok) Page loaded.")
+                # page.wait_for_load_state("networkidle", timeout=30000)
+                print(f'*** DEBUG (send_prompt_to_grok) page_content: \n{page.content()}')
 
                 textarea_selector = 'form textarea'
+                page.wait_for_selector(textarea_selector)
+                print("*** DEBUG (send_prompt_to_grok) textarea_selector loaded.")
                 # Input the prompt
                 page.fill(selector=textarea_selector, value=prompt)
                 print("*** DEBUG (send_prompt_to_grok) Found textarea.")
                 page.wait_for_timeout(1000 * random.uniform(2.5, 5.5))
 
-                # Click submit button
-                submit_button_selector = 'form button[type="submit"]'
-                print("*** DEBUG (send_prompt_to_grok) Looking for submit button...")
-                page.click(submit_button_selector)
-                print("*** (send_prompt_to_grok) Found submit button.")
-                page.wait_for_timeout(1000 * random.uniform(2.5, 5.5))
+                # # Click submit button
+                # submit_button_selector = 'form button[type="submit"]'
+                # print("*** DEBUG (send_prompt_to_grok) Looking for submit button...")
+                # page.click(submit_button_selector)
+                # print("*** (send_prompt_to_grok) Found submit button.")
+                # page.wait_for_timeout(1000 * random.uniform(2.5, 5.5))
 
-                print("*** DEBUG (send_prompt_to_grok) Submitted prompt.")
-                time.sleep(10)
+                # print("*** DEBUG (send_prompt_to_grok) Submitted prompt.")
+                # time.sleep(10)
 
-                response_selector = '#last-reply-container .response-content-markdown code'
-                print("*** DEBUG (send_prompt_to_grok) Waiting for response...")
-                try:
-                    page.wait_for_selector(response_selector, timeout=30000)
-                    response_text = page.text_content(response_selector)
-                    print('*' * 60)
-                    print(f'*** DEGUG (send_prompt_to_grok)response text: {response_text}')
-                    print('*' * 60)
-                except Exception as e:
-                    logger.error(f"*** DEBUG (send_prompt_to_grok) Error: {str(e)} \ntraceback: {traceback.format_exc()}")
+                # response_selector = '#last-reply-container .response-content-markdown code'
+                # print("*** DEBUG (send_prompt_to_grok) Waiting for response...")
+                # try:
+                #     page.wait_for_selector(response_selector, timeout=30000)
+                #     response_text = page.text_content(response_selector)
+                #     print('*' * 60)
+                #     print(f'*** DEGUG (send_prompt_to_grok)response text: {response_text}')
+                #     print('*' * 60)
+                # except Exception as e:
+                #     logger.error(f"*** DEBUG (send_prompt_to_grok) Error: {str(e)} \ntraceback: {traceback.format_exc()}")
 
             except Exception as e:
                 logger.error(f"*** DEBUG (send_prompt_to_grok) ERROR: {str(e)} \ntraceback: {traceback.format_exc()}")

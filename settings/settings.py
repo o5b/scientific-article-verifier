@@ -206,13 +206,14 @@ CHANNEL_LAYERS = {
 }
 
 
-APP_EMAIL = os.getenv('APP_EMAIL', 'example@mail.com')
-NCBI_API_KEY = os.getenv('NCBI_API_KEY', '') # PubMed
+APP_EMAIL = os.getenv('SECRET_APP_EMAIL', 'example@mail.com')
+NCBI_API_KEY = os.getenv('SECRET_NCBI_API_KEY', '') # PubMed
 
 
-# OPENAI_API_KEY = os.getenv('OPENAI_API_KEY', '')
-# OPENAI_DEFAULT_MODEL = "gpt-4o-mini"
-LLM_PROVIDER_FOR_ANALYSIS = 'Grok' # "OpenAI", "Anthropic" и т.д.
+OPENAI_API_KEY = os.getenv('SECRET_OPENAI_API_KEY', '')
+OPENAI_DEFAULT_MODEL = "gpt-4o-mini"
+# LLM_PROVIDER_FOR_ANALYSIS = 'OpenAI' # 'Grok'
+LLM_PROVIDER_FOR_ANALYSIS = 'OpenAI' if os.getenv('SECRET_OPENAI_API_KEY', '') else 'Grok'
 
 
 API_SOURCE_NAMES = {
