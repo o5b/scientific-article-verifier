@@ -23,6 +23,7 @@ from .helpers import (
     # download_pdf,
     download_pdf_from_pmc,
     download_pdf_from_scihub_box,
+    download_pdf_from_rxiv,
     extract_structured_text_from_jats,
     # parse_arxiv_authors,
     parse_crossref_authors,
@@ -832,6 +833,36 @@ def process_data_task(
                     f'Ошибка при запросе PDF файла из Sci-Hub.Box: {exc}',
                     source_api=current_api_name
                 )
+
+            if hasattr(article, 'doi') and article.doi and not article.pdf_file and not pdf_to_save:
+                if 'rxiv_version' in article_data and article_data['rxiv_version']:
+                    send_user_notification(
+                        user_id,
+                        task_id,
+                        query_display_name,
+                        'PROGRESS',
+                        f'RXVI: Начало получения PDF файла для DOI: {article.doi}...',
+                        source_api=current_api_name
+                    )
+                    pdf_to_save, pdf_url = download_pdf_from_rxiv(article.doi, article_data['rxiv_version'])
+                    if pdf_to_save:
+                        send_user_notification(
+                            user_id,
+                            task_id,
+                            query_display_name,
+                            'INFO',
+                            f'RXVI: PDF файл для: {article.doi} успешно получен из: {pdf_url}.',
+                            source_api=current_api_name
+                        )
+                    else:
+                        send_user_notification(
+                            user_id,
+                            task_id,
+                            query_display_name,
+                            'WARNING',
+                            f'RXVI: Не удалось получить PDF файл для: {article.doi} из {pdf_url}.',
+                            source_api=current_api_name
+                        )
 
             # if not pdf_to_save:
             #     if 'rxiv_version' in article_data and article_data['rxiv_version']:

@@ -19,7 +19,8 @@ from patchright.sync_api import Browser, BrowserContext, Page, sync_playwright
 # from scidownl import scihub_download
 # from scidownl.core.updater import SearchScihubDomainUpdater
 # from django.conf import settings
-# from django.utils.timezone import now, timedelta
+from django.utils import timezone
+
 from .models import Article, ArticleAuthorOrder, ArticleContent, Author, ReferenceLink
 
 logger = logging.getLogger(__name__)
@@ -426,7 +427,7 @@ def parse_references_from_jats(xml_string: str) -> list:
     return references
 
 
-def download_pdf_from_pmc(pdf_url: str) -> str | None:
+def download_pdf_from_pmc(pdf_url: str):
     file_content = ''
     download_url = None
     # content_type = None
@@ -529,12 +530,13 @@ def download_pdf_from_pmc(pdf_url: str) -> str | None:
                 print(f'*** DEBUG (download_pdf_from_pmc) download_url : {download_url}')
                 resp = None
                 if download_url:
-                    resp = page.request.get(pdf_url)
+                    # resp = page.request.get(pdf_url)
+                    resp = page.request.get(download_url)
 
                 if resp.status == 200:
                     if 'content-type' in resp.headers and 'application/pdf' in resp.headers['content-type']:
                         file_content = resp.body()
-                        print(f'***** (download_pdf) pdf_url: {pdf_url}, \nheaders: {resp.headers}, \ncontent-type: {resp.headers['content-type']}, \nfile_content: {file_content[:1000]}')
+                        print(f'***** (download_pdf) pdf_url: {pdf_url}, \ndownload_url: {download_url}, \nheaders: {resp.headers}, \ncontent-type: {resp.headers['content-type']}, \nfile_content: {file_content[:1000]}')
                 else:
                     print(f"*** DEBUG (download_pdf_from_pmc) *resp.status not 200* Download PDF from URL: {pdf_url}. Response: {resp}, response body length: {len(resp.body()) if resp.body() else ''}, resp.body(): {resp.body()[1000] if resp.body() else ''}")
 
@@ -579,7 +581,59 @@ def download_pdf_from_pmc(pdf_url: str) -> str | None:
     return file_content, download_url
 
 
-def download_pdf_from_scihub_box(doi):
+def download_pdf_from_rxiv(doi: str, rxiv_version: str):
+    file_content = b''
+    pdf_link = ''
+    try:
+
+        for api_server in ['biorxiv', 'medrxiv']:
+            url_html = f"https://www.{api_server}.org/content/{doi}v{rxiv_version}"
+            print(f"[+] (download_pdf_from_rxiv) Открываю страницу с HTML: {url_html}")
+
+            with sync_playwright() as pw:
+                browser = pw.chromium.launch(headless=True)
+                context = browser.new_context()
+                page = context.new_page()
+
+                try:
+                    page.goto(url_html, wait_until='load')
+                    time.sleep(3)
+
+                    # найти ссылку на PDF в DOM и перейти по ней
+                    pdf_href_attr = f'a[href$="{doi}v{rxiv_version}.full.pdf"]'
+                    pdf_link = page.get_attribute(pdf_href_attr, 'href')
+
+                    if pdf_link:
+                        # Полный URL (он может быть относительным)
+                        if pdf_link.startswith('/'):
+                            pdf_link = f"https://www.biorxiv.org{pdf_link}"
+                        print(f"[+] (download_pdf_from_rxiv) PDF URL Link: {pdf_link}")
+
+                        # скачать PDF через API playwright
+                        response = context.request.get(pdf_link)
+                        if response.ok and 'application/pdf' in response.headers.get('content-type', ''):
+                            if response.body()[:4] == b'%PDF':
+                                if response.body() > file_content:
+                                    file_content = response.body()
+                        else:
+                            print(f"[!] (download_pdf_from_rxiv) Не удалось получить PDF (status={response.status}, url_html: {url_html})")
+                    else:
+                        print(f"*** (download_pdf_from_rxiv) pdf_link Do Not Found! Download PDF from URL: {url_html}")
+
+                except Exception as e:
+                    print(f"*** (download_pdf_from_rxiv) Error Download PDF from URL: {url_html}. \nError Msg: {str(e)} \nTraceback: {traceback.print_exc()}")
+                finally:
+                    browser.close()
+
+    except Exception as e:
+        print(f"*** (download_pdf_from_rxiv) Error Download PDF for DOI: {doi}, rxiv_version: {rxiv_version}. \nError Msg: {str(e)} \nTraceback: {traceback.print_exc()}")
+
+    print(f"[+] (download_pdf_from_rxiv) PDF Download Succes! URL Link: {pdf_link}, \nfile_content: {file_content[:100] if len(file_content) > 100 else ''}")
+
+    return file_content, pdf_link
+
+
+def download_pdf_from_scihub_box(doi: str):
     """Downloads a PDF from Sci-Hub using Playwright.
 
     Args:
@@ -602,7 +656,7 @@ def download_pdf_from_scihub_box(doi):
                 page: Page = context.new_page()
 
                 try:
-                    page = context.new_page()
+                    # page = context.new_page()
                     # Navigate to Sci-Hub and search for the paper
                     page.goto(domain)
                     time.sleep(3)
@@ -665,7 +719,7 @@ def download_pdf_from_scihub_box(doi):
     return file_content, pdf_url
 
 
-def send_prompt_to_grok(prompt):
+def send_prompt_to_grok(prompt: str) -> str | None:
     response_text = ''
     with sync_playwright() as playwright:
         with playwright.chromium.launch(
@@ -688,36 +742,36 @@ def send_prompt_to_grok(prompt):
 
                 # Wait for the page to be fully loaded
                 # page.wait_for_load_state("networkidle", timeout=30000)
-                print(f'*** DEBUG (send_prompt_to_grok) page_content: \n{page.content()}')
+                # print(f'*** DEBUG (send_prompt_to_grok) page_content: \n{page.content()}')
 
                 textarea_selector = 'form textarea'
-                page.wait_for_selector(textarea_selector)
-                print("*** DEBUG (send_prompt_to_grok) textarea_selector loaded.")
+                # page.wait_for_selector(textarea_selector)
+                # print("*** DEBUG (send_prompt_to_grok) textarea_selector loaded.")
                 # Input the prompt
                 page.fill(selector=textarea_selector, value=prompt)
                 print("*** DEBUG (send_prompt_to_grok) Found textarea.")
                 page.wait_for_timeout(1000 * random.uniform(2.5, 5.5))
 
-                # # Click submit button
-                # submit_button_selector = 'form button[type="submit"]'
-                # print("*** DEBUG (send_prompt_to_grok) Looking for submit button...")
-                # page.click(submit_button_selector)
-                # print("*** (send_prompt_to_grok) Found submit button.")
-                # page.wait_for_timeout(1000 * random.uniform(2.5, 5.5))
+                # Click submit button
+                submit_button_selector = 'form button[type="submit"]'
+                print("*** DEBUG (send_prompt_to_grok) Looking for submit button...")
+                page.click(submit_button_selector)
+                print("*** (send_prompt_to_grok) Found submit button.")
+                page.wait_for_timeout(1000 * random.uniform(2.5, 5.5))
 
-                # print("*** DEBUG (send_prompt_to_grok) Submitted prompt.")
-                # time.sleep(10)
+                print("*** DEBUG (send_prompt_to_grok) Submitted prompt.")
+                time.sleep(10)
 
-                # response_selector = '#last-reply-container .response-content-markdown code'
-                # print("*** DEBUG (send_prompt_to_grok) Waiting for response...")
-                # try:
-                #     page.wait_for_selector(response_selector, timeout=30000)
-                #     response_text = page.text_content(response_selector)
-                #     print('*' * 60)
-                #     print(f'*** DEGUG (send_prompt_to_grok)response text: {response_text}')
-                #     print('*' * 60)
-                # except Exception as e:
-                #     logger.error(f"*** DEBUG (send_prompt_to_grok) Error: {str(e)} \ntraceback: {traceback.format_exc()}")
+                response_selector = '#last-reply-container .response-content-markdown code'
+                print("*** DEBUG (send_prompt_to_grok) Waiting for response...")
+                try:
+                    page.wait_for_selector(response_selector, timeout=30000)
+                    response_text = page.text_content(response_selector)
+                    print('*' * 60)
+                    print(f'*** DEGUG (send_prompt_to_grok)response text: {response_text}')
+                    print('*' * 60)
+                except Exception as e:
+                    logger.error(f"*** DEBUG (send_prompt_to_grok) Error: {str(e)} \ntraceback: {traceback.format_exc()}")
 
             except Exception as e:
                 logger.error(f"*** DEBUG (send_prompt_to_grok) ERROR: {str(e)} \ntraceback: {traceback.format_exc()}")

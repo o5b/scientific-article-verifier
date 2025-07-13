@@ -377,14 +377,14 @@
     {% endif %}
 </div>
 
-{% if article.abstract %}
+{% comment %} {% if article.abstract %}
 <div class="detail-section abstract">
     <h3>Аннотация</h3>
     <p>{{ article.abstract|linebreaksbr }}</p>
 </div>
-{% endif %}
+{% endif %} {% endcomment %}
 
-{% if article.structured_content %}
+{% comment %} {% if article.structured_content %}
     <div class="detail-section structured-text">
         <h3>Структурированное содержимое статьи</h3>
         {% if article.structured_content.title %}
@@ -449,7 +449,80 @@
             </div>
         {% endif %}
     </div>
+{% endif %} {% endcomment %}
+
+{% if article.structured_content %}
+    <div class="detail-section structured-text">
+        <h3>Структурированное содержимое статьи</h3>
+
+        <div style="max-height: 300px; overflow-y: auto; border: 1px solid #eee; padding: 10px; background: #fdfdfd;">
+
+            {% if article.structured_content.title %}
+                <h4>{{ article.structured_content.title }}</h4>
+            {% endif %}
+
+            {% if article.structured_content.abstract %}
+                <div class="content-section">
+                    <h5>Abstract (Аннотация)</h5>
+                    <p>{{ article.structured_content.abstract|linebreaksbr }}</p>
+                </div>
+            {% endif %}
+
+            {% if article.structured_content.introduction %}
+                <div class="content-section">
+                    <h5>Introduction (Введение)</h5>
+                    <p>{{ article.structured_content.introduction|linebreaksbr }}</p>
+                </div>
+            {% endif %}
+
+            {% if article.structured_content.methods %}
+                <div class="content-section">
+                    <h5>Methods (Методы)</h5>
+                    <p>{{ article.structured_content.methods|linebreaksbr }}</p>
+                </div>
+            {% endif %}
+
+            {% if article.structured_content.results %}
+                <div class="content-section">
+                    <h5>Results (Результаты)</h5>
+                    <p>{{ article.structured_content.results|linebreaksbr }}</p>
+                </div>
+            {% endif %}
+
+            {% if article.structured_content.discussion %}
+                <div class="content-section">
+                    <h5>Discussion (Обсуждение)</h5>
+                    <p>{{ article.structured_content.discussion|linebreaksbr }}</p>
+                </div>
+            {% endif %}
+
+            {% if article.structured_content.other_sections %}
+                {% for sec in article.structured_content.other_sections %}
+                    <div class="content-section">
+                        <h5>{{ sec.title|default:"Дополнительная секция" }}</h5>
+                        <p>{{ sec.text|linebreaksbr }}</p>
+                    </div>
+                {% endfor %}
+            {% endif %}
+
+            {% if article.structured_content.conclusion %}
+                <div class="content-section">
+                    <h5>Conclusion (Заключение)</h5>
+                    <p>{{ article.structured_content.conclusion|linebreaksbr }}</p>
+                </div>
+            {% endif %}
+
+            {% if not article.structured_content.introduction and not article.structured_content.methods and article.structured_content.full_body_fallback %}
+                <div class="content-section">
+                    <h5>Основной текст (без разделов)</h5>
+                    <p>{{ article.structured_content.full_body_fallback|linebreaksbr }}</p>
+                </div>
+            {% endif %}
+        </div>
+    </div>
 {% endif %}
+
+
 
 {% if article.cleaned_text_for_llm %}
     <div class="detail-section full-text">
