@@ -27,7 +27,7 @@ from .helpers import (
     extract_structured_text_from_jats,
     # parse_arxiv_authors,
     parse_crossref_authors,
-    # parse_europepmc_authors,
+    parse_europepmc_authors,
     # parse_openalex_authors,
     # parse_pubmed_authors,
     parse_pubmed_authors_from_xml_metadata,
@@ -235,6 +235,13 @@ def process_article_pipeline_task(
                         originating_reference_link_id=originating_reference_link_id,
                         # article_id_to_update=article_id_for_subtasks
                     ),
+                    fetch_data_from_europepmc_task.s(
+                        identifier_value=effective_doi_for_subtasks,
+                        identifier_type='DOI',
+                        user_id=user_id,
+                        originating_reference_link_id=originating_reference_link_id,
+                        # article_id_to_update=article_id_for_subtasks
+                    ),
                     fetch_data_from_rxiv_task.s(
                         doi=effective_doi_for_subtasks,
                         user_id=user_id,
@@ -404,8 +411,10 @@ def process_data_task(
         # article_content = ''
 
         author_list = []
-        full_text_xml_pmc = None
-        full_text_xml_rxvi = None
+        full_text = {'primary_source_api': '', 'full_text_xml': ''}
+        full_text_xml_pmc = ''
+        full_text_xml_europepmc = ''
+        full_text_xml_rxvi = ''
 
         for data in article_data_list:
             if data['status'] == 'success':
@@ -483,119 +492,35 @@ def process_data_task(
                                     # Если получен полный текст из PMC
                                     if key == 'full_text_xml_pmc':
                                         full_text_xml_pmc = val
+                                        if len(val) > len(full_text['full_text_xml']):
+                                            full_text = {
+                                                'primary_source_api': current_api_name,
+                                                'full_text_xml': val,
+                                            }
 
-                                        structured_data = extract_structured_text_from_jats(val)
-                                        if structured_data:
-                                            article.structured_content = structured_data
-                                            article.regenerate_cleaned_text_from_structured() # Вызываем метод модели для обновления cleaned_text_for_llm
+                    elif current_api_name == settings.API_SOURCE_NAMES['EUROPEPMC']:
+                        print("*** DEBUG (process_data_task) elif current_api_name == settings.API_SOURCE_NAMES['EUROPEPMC']:")
+                        if article_data.get('article_contents'):
+                            article_contents = article_data.get('article_contents')
+                            # print(f'********* article_contents: {article_contents}')
+                            for key, val in article_contents.items():
+                                print(f'*** DEBUG (process_data_task) EUROPEPMC key: {key}')
+                                if key and val:
+                                    ArticleContent.objects.update_or_create(
+                                        article=article,
+                                        source_api_name=current_api_name,
+                                        format_type=key,
+                                        defaults={'content': val}
+                                    )
 
-                                        # --- Парсинг и сохранение ссылок из полного текста ---
-                                        process_references_flag = (originating_reference_link_id is None)
-                                        if process_references_flag:
-                                            send_user_notification(
-                                                user_id,
-                                                task_id,
-                                                query_display_name,
-                                                'PROGRESS',
-                                                'Извлечение ссылок из полного текста PMC...',
-                                                progress_percent=85,
-                                                source_api=current_api_name
-                                            )
-
-                                            parsed_references = parse_references_from_jats(val)
-                                            if parsed_references:
-                                                send_user_notification(
-                                                    user_id,
-                                                    task_id,
-                                                    query_display_name,
-                                                    'INFO',
-                                                    f'Найдено {len(parsed_references)} ссылок в полном тексте. Обработка...',
-                                                    source_api=current_api_name
-                                                )
-
-                                                processed_jats_ref_count = 0
-                                                for ref_data in parsed_references:
-                                                    ref_doi_jats = ref_data.get('doi')
-                                                    ref_raw_text_jats = ref_data.get('raw_text')
-                                                    jats_ref_id = ref_data.get('jats_ref_id')
-
-                                                    # Нам нужен хотя бы какой-то идентификатор для ссылки (DOI, текст или внутренний ID)
-                                                    if not (ref_doi_jats or ref_raw_text_jats or jats_ref_id):
-                                                        continue
-
-                                                    # Готовим данные для сохранения
-                                                    ref_link_defaults = {
-                                                        'raw_reference_text': ref_raw_text_jats,
-                                                        'manual_data_json': {
-                                                            'jats_ref_id': jats_ref_id,
-                                                            'title': ref_data.get('title'),
-                                                            'year': ref_data.get('year'),
-                                                            'authors_str': ref_data.get('authors_str'),
-                                                            'journal_title': ref_data.get('journal_title'),
-                                                            'doi_from_source': ref_doi_jats,
-                                                        }
-                                                    }
-                                                    # Удаляем None значения из manual_data_json
-                                                    ref_link_defaults['manual_data_json'] = {k: v for k, v in ref_link_defaults['manual_data_json'].items() if v is not None}
-                                                    if not ref_link_defaults['manual_data_json']:
-                                                        ref_link_defaults['manual_data_json'] = None
-
-                                                    # Определяем параметры для поиска существующей ссылки (чтобы избежать дублей)
-                                                    lookup_params = {'source_article': article}
-                                                    if ref_doi_jats:
-                                                        lookup_params['target_article_doi'] = ref_doi_jats
-                                                    # Если нет DOI, но есть jats_ref_id, можно искать по нему (требует поддержки БД для JSON-поиска)
-                                                    # Для PostgreSQL можно так:
-                                                    elif jats_ref_id:
-                                                        lookup_params['manual_data_json__jats_ref_id'] = jats_ref_id
-                                                    # Если нет ни DOI, ни jats_ref_id, используем сырой текст как последний вариант
-                                                    elif ref_raw_text_jats:
-                                                        lookup_params['raw_reference_text'] = ref_raw_text_jats
-                                                    else:
-                                                        continue # Пропускаем, если не за что зацепиться
-
-                                                    # Устанавливаем статус и DOI в defaults
-                                                    if ref_doi_jats:
-                                                        ref_link_defaults['target_article_doi'] = ref_doi_jats
-                                                        ref_link_defaults['status'] = ReferenceLink.StatusChoices.DOI_PROVIDED_NEEDS_LOOKUP
-                                                    else:
-                                                        ref_link_defaults['status'] = ReferenceLink.StatusChoices.PENDING_DOI_INPUT
-
-                                                    # Создаем или обновляем объект ReferenceLink
-                                                    ref_obj, ref_created = ReferenceLink.objects.update_or_create(
-                                                        **lookup_params,
-                                                        defaults=ref_link_defaults
-                                                    )
-                                                    processed_jats_ref_count += 1
-
-                                                    # Если у ссылки есть DOI, ставим в очередь на обработку
-                                                    if ref_doi_jats:
-                                                        print(f"*** DEBUG (process_data_task) PUBMED ref_doi_jats: {ref_doi_jats}")
-                                                        send_user_notification(
-                                                            user_id,
-                                                            task_id,
-                                                            query_display_name,
-                                                            'INFO',
-                                                            f'PMC JATS: Найдена ссылка {ref_obj.id} с DOI: {ref_doi_jats}. Запуск конвейера.',
-                                                            source_api=current_api_name
-                                                        )
-                                                        process_article_pipeline_task.delay(
-                                                            identifier_value=ref_doi_jats,
-                                                            identifier_type='DOI',
-                                                            user_id=user_id,
-                                                            originating_reference_link_id=ref_obj.id # Передаем ID созданной/обновленной ссылки
-                                                        )
-
-                                                if processed_jats_ref_count > 0:
-                                                    send_user_notification(
-                                                        user_id,
-                                                        task_id,
-                                                        query_display_name,
-                                                        'PROGRESS',
-                                                        f'PMC JATS: Обработано {processed_jats_ref_count} ссылок.',
-                                                        progress_percent=90,
-                                                        source_api=current_api_name
-                                                    )
+                                    # Если получен полный текст из EUROPEPMC
+                                    if key == 'full_text_xml_europepmc':
+                                        full_text_xml_europepmc = val
+                                        if len(val) > len(full_text['full_text_xml']):
+                                            full_text = {
+                                                'primary_source_api': current_api_name,
+                                                'full_text_xml': val,
+                                            }
 
                     elif current_api_name == settings.API_SOURCE_NAMES['RXIV']:
                         print("*** DEBUG (process_data_task) elif current_api_name == settings.API_SOURCE_NAMES['RXIV']:")
@@ -615,119 +540,11 @@ def process_data_task(
                                     # Если получен полный текст
                                     if key == 'full_text_xml_rxvi':
                                         full_text_xml_rxvi = val
-
-                                        structured_data = extract_structured_text_from_jats(val)
-                                        if structured_data:
-                                            article.structured_content = structured_data
-                                            article.regenerate_cleaned_text_from_structured() # обновление cleaned_text_for_llm
-
-                                        # --- Парсинг и сохранение ссылок из полного текста ---
-                                        process_references_flag = (originating_reference_link_id is None)
-                                        if process_references_flag:
-                                            send_user_notification(
-                                                user_id,
-                                                task_id,
-                                                query_display_name,
-                                                'PROGRESS',
-                                                'Извлечение ссылок из полного текста RXVI...',
-                                                progress_percent=85,
-                                                source_api=current_api_name
-                                            )
-
-                                            parsed_references = parse_references_from_jats(val)
-                                            if parsed_references:
-                                                send_user_notification(
-                                                    user_id,
-                                                    task_id,
-                                                    query_display_name,
-                                                    'INFO',
-                                                    f'Найдено {len(parsed_references)} ссылок в полном тексте RXVI. Обработка...',
-                                                    source_api=current_api_name
-                                                )
-
-                                                processed_jats_ref_count = 0
-                                                for ref_data in parsed_references:
-                                                    ref_doi_jats = ref_data.get('doi')
-                                                    ref_raw_text_jats = ref_data.get('raw_text')
-                                                    jats_ref_id = ref_data.get('jats_ref_id')
-
-                                                    # Нам нужен хотя бы какой-то идентификатор для ссылки (DOI, текст или внутренний ID)
-                                                    if not (ref_doi_jats or ref_raw_text_jats or jats_ref_id):
-                                                        continue
-
-                                                    # Готовим данные для сохранения
-                                                    ref_link_defaults = {
-                                                        'raw_reference_text': ref_raw_text_jats,
-                                                        'manual_data_json': {
-                                                            'jats_ref_id': jats_ref_id,
-                                                            'title': ref_data.get('title'),
-                                                            'year': ref_data.get('year'),
-                                                            'authors_str': ref_data.get('authors_str'),
-                                                            'journal_title': ref_data.get('journal_title'),
-                                                            'doi_from_source': ref_doi_jats,
-                                                        }
-                                                    }
-                                                    # Удаляем None значения из manual_data_json
-                                                    ref_link_defaults['manual_data_json'] = {k: v for k, v in ref_link_defaults['manual_data_json'].items() if v is not None}
-                                                    if not ref_link_defaults['manual_data_json']:
-                                                        ref_link_defaults['manual_data_json'] = None
-
-                                                    # Определяем параметры для поиска существующей ссылки (чтобы избежать дублей)
-                                                    lookup_params = {'source_article': article}
-                                                    if ref_doi_jats:
-                                                        lookup_params['target_article_doi'] = ref_doi_jats
-                                                    # Если нет DOI, но есть jats_ref_id, можно искать по нему (требует поддержки БД для JSON-поиска)
-                                                    # Для PostgreSQL можно так:
-                                                    elif jats_ref_id:
-                                                        lookup_params['manual_data_json__jats_ref_id'] = jats_ref_id
-                                                    # Если нет ни DOI, ни jats_ref_id, используем сырой текст как последний вариант
-                                                    elif ref_raw_text_jats:
-                                                        lookup_params['raw_reference_text'] = ref_raw_text_jats
-                                                    else:
-                                                        continue # Пропускаем, если не за что зацепиться
-
-                                                    # Устанавливаем статус и DOI в defaults
-                                                    if ref_doi_jats:
-                                                        ref_link_defaults['target_article_doi'] = ref_doi_jats
-                                                        ref_link_defaults['status'] = ReferenceLink.StatusChoices.DOI_PROVIDED_NEEDS_LOOKUP
-                                                    else:
-                                                        ref_link_defaults['status'] = ReferenceLink.StatusChoices.PENDING_DOI_INPUT
-
-                                                    # Создаем или обновляем объект ReferenceLink
-                                                    ref_obj, ref_created = ReferenceLink.objects.update_or_create(
-                                                        **lookup_params,
-                                                        defaults=ref_link_defaults
-                                                    )
-                                                    processed_jats_ref_count += 1
-
-                                                    # Если у ссылки есть DOI, ставим в очередь на обработку
-                                                    if ref_doi_jats:
-                                                        print(f"*** DEBUG (process_data_task) RXIV ref_doi_jats: {ref_doi_jats}")
-                                                        send_user_notification(
-                                                            user_id,
-                                                            task_id,
-                                                            query_display_name,
-                                                            'INFO',
-                                                            f'RXVI JATS: Найдена ссылка {ref_obj.id} с DOI: {ref_doi_jats}. Запуск конвейера.',
-                                                            source_api=current_api_name
-                                                        )
-                                                        process_article_pipeline_task.delay(
-                                                            identifier_value=ref_doi_jats,
-                                                            identifier_type='DOI',
-                                                            user_id=user_id,
-                                                            originating_reference_link_id=ref_obj.id # Передаем ID созданной/обновленной ссылки
-                                                        )
-
-                                                if processed_jats_ref_count > 0:
-                                                    send_user_notification(
-                                                        user_id,
-                                                        task_id,
-                                                        query_display_name,
-                                                        'PROGRESS',
-                                                        f'RXVI JATS: Обработано {processed_jats_ref_count} ссылок.',
-                                                        progress_percent=90,
-                                                        source_api=current_api_name
-                                                    )
+                                        if len(val) > len(full_text['full_text_xml']):
+                                            full_text = {
+                                                'primary_source_api': current_api_name,
+                                                'full_text_xml': val,
+                                            }
 
         article.title = title
         article.abstract = abstract
@@ -745,6 +562,257 @@ def process_data_task(
         pdf_file_name = None
         pdf_to_save = None
         pdf_url = None
+
+        if full_text['full_text_xml']:
+            current_api_name = full_text['primary_source_api']
+            structured_data = extract_structured_text_from_jats(full_text['full_text_xml'])
+            if structured_data:
+                article.structured_content = structured_data
+                article.regenerate_cleaned_text_from_structured() # Вызываем метод модели для обновления cleaned_text_for_llm
+                article.primary_source_api = current_api_name
+
+            # --- Парсинг и сохранение ссылок из полного текста ---
+            process_references_flag = (originating_reference_link_id is None)
+            if process_references_flag:
+                send_user_notification(
+                    user_id,
+                    task_id,
+                    query_display_name,
+                    'PROGRESS',
+                    f'Извлечение ссылок из полного текста {current_api_name}..',
+                    progress_percent=85,
+                    source_api=current_api_name
+                )
+
+                parsed_references = parse_references_from_jats(full_text['full_text_xml'])
+                if parsed_references:
+                    send_user_notification(
+                        user_id,
+                        task_id,
+                        query_display_name,
+                        'INFO',
+                        f'Найдено {len(parsed_references)} ссылок в полном тексте. Обработка...',
+                        source_api=current_api_name
+                    )
+
+                    processed_jats_ref_count = 0
+                    for ref_data in parsed_references:
+                        ref_doi_jats = ref_data.get('doi')
+                        ref_raw_text_jats = ref_data.get('raw_text')
+                        jats_ref_id = ref_data.get('jats_ref_id')
+
+                        # Нам нужен хотя бы какой-то идентификатор для ссылки (DOI, текст или внутренний ID)
+                        if not (ref_doi_jats or ref_raw_text_jats or jats_ref_id):
+                            continue
+
+                        # Готовим данные для сохранения
+                        ref_link_defaults = {
+                            'raw_reference_text': ref_raw_text_jats,
+                            'manual_data_json': {
+                                'jats_ref_id': jats_ref_id,
+                                'title': ref_data.get('title'),
+                                'year': ref_data.get('year'),
+                                'authors_str': ref_data.get('authors_str'),
+                                'journal_title': ref_data.get('journal_title'),
+                                'doi_from_source': ref_doi_jats,
+                            }
+                        }
+                        # Удаляем None значения из manual_data_json
+                        ref_link_defaults['manual_data_json'] = {k: v for k, v in ref_link_defaults['manual_data_json'].items() if v is not None}
+
+                        if not ref_link_defaults['manual_data_json']:
+                            ref_link_defaults['manual_data_json'] = None
+
+                        # Определяем параметры для поиска существующей ссылки (чтобы избежать дублей)
+                        lookup_params = {'source_article': article}
+                        if ref_doi_jats:
+                            lookup_params['target_article_doi'] = ref_doi_jats
+                        # Если нет DOI, но есть jats_ref_id, можно искать по нему (требует поддержки БД для JSON-поиска)
+                        # Для PostgreSQL можно так:
+                        elif jats_ref_id:
+                            lookup_params['manual_data_json__jats_ref_id'] = jats_ref_id
+                        # Если нет ни DOI, ни jats_ref_id, используем сырой текст как последний вариант
+                        elif ref_raw_text_jats:
+                            lookup_params['raw_reference_text'] = ref_raw_text_jats
+                        else:
+                            continue # Пропускаем, если не за что зацепиться
+
+                        # Устанавливаем статус и DOI в defaults
+                        if ref_doi_jats:
+                            ref_link_defaults['target_article_doi'] = ref_doi_jats
+                            ref_link_defaults['status'] = ReferenceLink.StatusChoices.DOI_PROVIDED_NEEDS_LOOKUP
+                        else:
+                            ref_link_defaults['status'] = ReferenceLink.StatusChoices.PENDING_DOI_INPUT
+
+                        # Создаем или обновляем объект ReferenceLink
+                        ref_obj, ref_created = ReferenceLink.objects.update_or_create(
+                            **lookup_params,
+                            defaults=ref_link_defaults
+                        )
+                        processed_jats_ref_count += 1
+
+                        # Ищем DOI для ссылки на crossref
+                        if not ref_doi_jats:
+                            # task = find_doi_for_reference_task.delay(
+                            #     reference_link_id=ref_obj.id,
+                            #     user_id=user_id
+                            # )
+
+                            # Формируем поисковый запрос для CrossRef
+                            # Используем данные из manual_data_json (если есть название, авторы, год) или raw_reference_text
+                            search_query_parts = []
+                            if ref_obj.manual_data_json:
+                                if ref_obj.manual_data_json.get('title'):
+                                    search_query_parts.append(str(ref_obj.manual_data_json['title']))
+                                # Можно добавить авторов, если они есть в structured виде, например, первый автор
+                                if ref_obj.manual_data_json.get('authors_str'):
+                                    search_query_parts.append(str(ref_obj.manual_data_json['authors_str']))
+                                if ref_obj.manual_data_json.get('year'):
+                                    search_query_parts.append(str(ref_obj.manual_data_json['year']))
+
+                            if not search_query_parts and ref_obj.raw_reference_text: # Если нет структурированных данных, берем сырой текст
+                                search_query_parts.append(ref_obj.raw_reference_text[:300]) # Ограничим длину запроса
+
+                            if not search_query_parts:
+                                send_user_notification(
+                                    user_id,
+                                    task_id,
+                                    query_display_name,
+                                    'INFO',
+                                    f'{current_api_name} JATS: Недостаточно данных для поиска DOI для ссылки: {ref_obj.id}.',
+                                    source_api=current_api_name,
+                                    # originating_reference_link_id=reference_link_id
+                                )
+                                ref_obj.status = ReferenceLink.StatusChoices.ERROR_DOI_LOOKUP
+                                ref_obj.save(update_fields=['status', 'updated_at'])
+
+                            else:
+                                bibliographic_query = " ".join(search_query_parts)
+
+                                params = {
+                                    'query.bibliographic': bibliographic_query,
+                                    'rows': 1, # Нам нужен только самый релевантный результат
+                                    'mailto': APP_EMAIL
+                                }
+                                print(f'######### params: {params}')
+                                api_url = "https://api.crossref.org/works"
+                                # headers = {'User-Agent': f'ScientificPapersApp/1.0 (mailto:{APP_EMAIL})'}
+                                headers = {'User-Agent': USER_AGENT_LIST[0]}
+
+                                ref_json_data = None
+                                try:
+                                    time.sleep(2)
+                                    send_user_notification(
+                                        user_id,
+                                        task_id,
+                                        query_display_name,
+                                        'PROGRESS',
+                                        f'{current_api_name} Запрос к CrossRef для поиска DOI: "{bibliographic_query[:50]}..."',
+                                        # progress_percent=30,
+                                        source_api=current_api_name,
+                                        # originating_reference_link_id=reference_link_id
+                                    )
+                                    response = requests.get(api_url, params=params, headers=headers, timeout=30)
+                                    # response.raise_for_status()
+                                    if response and response.status_code == 200:
+                                        ref_json_data = response.json()
+                                        print(f'######## ref_json_data: {ref_json_data}')
+                                except requests.exceptions.RequestException as exc:
+                                    send_user_notification(
+                                        user_id,
+                                        task_id,
+                                        query_display_name,
+                                        'RETRYING',
+                                        f'Ошибка сети/API CrossRef при поиске DOI: {str(exc)}',
+                                        source_api=current_api_name,
+                                        # originating_reference_link_id=reference_link_id
+                                    )
+
+                                if ref_json_data and ref_json_data.get('message') and ref_json_data['message'].get('items'):
+                                    found_item = ref_json_data['message']['items'][0]
+                                    found_doi = found_item.get('DOI')
+                                    score = found_item.get('score', 0) # CrossRef возвращает score релевантности
+
+                                    if found_doi:
+                                        print(f'########### found_doi: {found_doi}')
+                                        ref_doi_jats = found_doi
+                                        # Можно добавить проверку score, чтобы отсеять совсем нерелевантные результаты
+                                        # Например, if score > некоторого порога (например 60-70)
+                                        ref_obj.target_article_doi = found_doi.lower()
+                                        ref_obj.status = ReferenceLink.StatusChoices.DOI_PROVIDED_NEEDS_LOOKUP
+                                        # Можно сохранить и другую информацию, например, название найденной статьи, в manual_data_json для сверки
+                                        if 'title' in found_item and isinstance(found_item['title'], list) and found_item['title']:
+                                            ref_obj.manual_data_json = ref_obj.manual_data_json or {}
+                                            ref_obj.manual_data_json['found_title_by_doi_search'] = found_item['title'][0]
+                                            ref_obj.manual_data_json['found_doi_score'] = score
+
+                                        ref_obj.save(update_fields=['target_article_doi', 'status', 'manual_data_json', 'updated_at'])
+
+                                        send_user_notification(
+                                            user_id,
+                                            task_id,
+                                            query_display_name,
+                                            'SUCCESS',
+                                            f'Найден DOI: {found_doi} (score: {score}) для ссылки.',
+                                            # progress_percent=100,
+                                            source_api=current_api_name,
+                                            # originating_reference_link_id=reference_link_id
+                                        )
+                                    else:
+                                        ref_obj.status = ReferenceLink.StatusChoices.ERROR_DOI_LOOKUP # Или новый статус "DOI не найден"
+                                        ref_obj.save(update_fields=['status', 'updated_at'])
+                                        send_user_notification(
+                                            user_id,
+                                            task_id,
+                                            query_display_name,
+                                            'FAILURE',
+                                            'DOI не найден в ответе CrossRef.',
+                                            # progress_percent=100,
+                                            source_api=current_api_name,
+                                            # originating_reference_link_id=reference_link_id
+                                        )
+                                else:
+                                    ref_obj.status = ReferenceLink.StatusChoices.ERROR_DOI_LOOKUP # Или новый статус "DOI не найден"
+                                    ref_obj.save(update_fields=['status', 'updated_at'])
+                                    send_user_notification(
+                                        user_id,
+                                        task_id,
+                                        query_display_name,
+                                        'FAILURE',
+                                        'DOI не найден (пустой ответ от CrossRef).',
+                                        # progress_percent=100,
+                                        source_api=current_api_name,
+                                        # originating_reference_link_id=reference_link_id
+                                    )
+
+                        # Если у ссылки есть DOI, ставим в очередь на обработку
+                        if ref_doi_jats:
+                            print(f"*** DEBUG (process_data_task) {current_api_name} ref_doi_jats: {ref_doi_jats}")
+                            send_user_notification(
+                                user_id,
+                                task_id,
+                                query_display_name,
+                                'INFO',
+                                f'{current_api_name} JATS: Найдена ссылка {ref_obj.id} с DOI: {ref_doi_jats}. Запуск конвейера.',
+                                source_api=current_api_name
+                            )
+                            process_article_pipeline_task.delay(
+                                identifier_value=ref_doi_jats,
+                                identifier_type='DOI',
+                                user_id=user_id,
+                                originating_reference_link_id=ref_obj.id # Передаем ID созданной/обновленной ссылки
+                            )
+
+                    if processed_jats_ref_count > 0:
+                        send_user_notification(
+                            user_id,
+                            task_id,
+                            query_display_name,
+                            'PROGRESS',
+                            f'{current_api_name} JATS: Обработано {processed_jats_ref_count} ссылок.',
+                            progress_percent=90,
+                            source_api=current_api_name
+                        )
 
         if hasattr(article, 'pmc_id') and article.pmc_id and not article.pdf_file:
             send_user_notification(
@@ -764,6 +832,7 @@ def process_data_task(
                 if pdf_to_save:
                     print('*** DEBUG (process_data_task) if pdf_to_save:')
                     # print(pdf_to_save)
+                    current_api_name = settings.API_SOURCE_NAMES['PUBMED']
                     send_user_notification(
                         user_id,
                         task_id,
@@ -807,6 +876,7 @@ def process_data_task(
                 # doi_pdf_url = f'https://doi.org/{article.doi}'
                 pdf_to_save, pdf_url = download_pdf_from_scihub_box(article.doi)
                 if pdf_to_save:
+                    current_api_name = settings.API_SOURCE_NAMES['SCIHUB']
                     send_user_notification(
                         user_id,
                         task_id,
@@ -846,6 +916,7 @@ def process_data_task(
                     )
                     pdf_to_save, pdf_url = download_pdf_from_rxiv(article.doi, article_data['rxiv_version'])
                     if pdf_to_save:
+                        current_api_name = settings.API_SOURCE_NAMES['RXIV']
                         send_user_notification(
                             user_id,
                             task_id,
@@ -863,49 +934,6 @@ def process_data_task(
                             f'RXVI: Не удалось получить PDF файл для: {article.doi} из {pdf_url}.',
                             source_api=current_api_name
                         )
-
-            # if not pdf_to_save:
-            #     if 'rxiv_version' in article_data and article_data['rxiv_version']:
-            #         for api_server_name_from_data in ['biorxiv', 'medrxiv']:
-            #             pdf_file_name = f"article_{article.doi.replace('/', '_')}_{timezone.now().strftime('%Y%m%d%H%M%S')}.pdf"
-            #             pdf_url = f"https://{api_server_name_from_data}.org/content/{article.doi}v{article_data['rxiv_version']}.full.pdf"
-            #             send_user_notification(
-            #                 user_id,
-            #                 task_id,
-            #                 query_display_name,
-            #                 'PROGRESS',
-            #                 f'RXVI: Начало получения PDF файла для DOI: {article.doi} и URL: {pdf_url}...',
-            #                 source_api=current_api_name
-            #             )
-            #             try:
-            #                 time.sleep(5)
-            #                 # pdf_to_save = download_pdf(pdf_url, article.doi)
-            #                 if pdf_to_save:
-            #                     send_user_notification(
-            #                         user_id, task_id,
-            #                         query_display_name,
-            #                         'INFO',
-            #                         f'RXVI: PDF файл для: {article.doi} успешно получен из: {pdf_url}.',
-            #                         source_api=current_api_name
-            #                     )
-            #                 else:
-            #                     send_user_notification(
-            #                         user_id,
-            #                         task_id,
-            #                         query_display_name,
-            #                         'WARNING',
-            #                         f'RXVI: Не удалось получить PDF файл для: {article.doi} из {pdf_url}.',
-            #                         source_api=current_api_name
-            #                     )
-            #             except Exception as exc:
-            #                 send_user_notification(
-            #                     user_id,
-            #                     task_id,
-            #                     query_display_name,
-            #                     'WARNING',
-            #                     f'RXVI: Ошибка при запросе PDF файла для: {article.doi} из: {pdf_url}. \nError: {exc}',
-            #                     source_api=current_api_name
-            #                 )
 
         if pdf_to_save and not article.pdf_file:
             try:
@@ -942,6 +970,8 @@ def process_data_task(
                                 source_api=current_api_name
                             )
                             article.pdf_text = extracted_markitdown_text
+                            if not article.structured_content:
+                                article.primary_source_api = current_api_name
                         else:
                             send_user_notification(
                                 user_id,
@@ -973,6 +1003,7 @@ def process_data_task(
                 )
 
         article.save()
+
         send_user_notification(
             user_id,
             task_id,
@@ -1037,9 +1068,9 @@ def process_data_task(
                     originating_reference_link_id=originating_reference_link_id
                 )
 
-        # Если был получен полный текст из PMC, запускаем задачу для его анализа и связывания
-        if article.is_user_initiated and (full_text_xml_pmc or full_text_xml_rxvi):
-            print('*** DEBUG (process_data_task) if article.is_user_initiated and (full_text_xml_pmc or full_text_xml_rxvi):')
+        # Если был получен полный текст, запускаем задачу для его анализа и связывания
+        if article.is_user_initiated and (full_text_xml_pmc or full_text_xml_rxvi or full_text_xml_europepmc):
+            print('*** DEBUG (process_data_task) if article.is_user_initiated and (full_text_xml_pmc or full_text_xml_rxvi or full_text_xml_europepmc):')
             send_user_notification(
                 user_id,
                 task_id,
@@ -1055,7 +1086,7 @@ def process_data_task(
 
         # финальное уведомление
         final_message = f'{query_display_name}: Данные Статьи {article.id} "{article.title[:30]}...".'
-        if full_text_xml_pmc or full_text_xml_rxvi:
+        if full_text_xml_pmc or full_text_xml_rxvi or full_text_xml_europepmc:
             final_message += " Получен полный текст, запущена сегментация."
         send_user_notification(
             user_id,
@@ -1916,6 +1947,274 @@ def fetch_data_from_pubmed_task(
 
 
 @shared_task(bind=True, max_retries=3, default_retry_delay=60)
+def fetch_data_from_europepmc_task(
+    self,
+    identifier_value: str,
+    identifier_type: str = 'DOI',
+    user_id: int = None,
+    originating_reference_link_id: int = None):
+    # article_id_to_update: int = None):
+
+    try:
+        task_id = self.request.id
+        query_display_name = f"{identifier_type.upper()}:{identifier_value}"
+        current_api_name = settings.API_SOURCE_NAMES['EUROPEPMC']
+        article_data = {
+            'article_contents': {}
+        }
+
+        send_user_notification(
+            user_id,
+            task_id,
+            query_display_name,
+            'PENDING',
+            f'Начинаем обработку {current_api_name}...',
+            progress_percent=0,
+            source_api=current_api_name,
+            originating_reference_link_id=originating_reference_link_id,
+        )
+
+        if not identifier_value:
+            send_user_notification(
+                user_id,
+                task_id,
+                query_display_name,
+                'FAILURE',
+                'Идентификатор не указан.',
+                source_api=current_api_name,
+                originating_reference_link_id=originating_reference_link_id,
+            )
+            return {'status': 'error', 'message': 'Идентификатор не указан.', 'identifier': query_display_name}
+
+        article_owner = None
+        if user_id:
+            try:
+                article_owner = User.objects.get(id=user_id)
+            except User.DoesNotExist:
+                send_user_notification(
+                    user_id,
+                    task_id,
+                    query_display_name,
+                    'FAILURE',
+                    f'Пользователь ID {user_id} не найден.',
+                    source_api=current_api_name,
+                    originating_reference_link_id=originating_reference_link_id,
+                )
+                return {'status': 'error', 'message': f'User with ID {user_id} not found.'}
+
+        # Запрос к API поиска для получения метаданных и PMCID
+        query_string = f"{identifier_type.upper()}:{identifier_value}"
+        search_params = {'query': query_string, 'format': 'json', 'resultType': 'core', 'email': APP_EMAIL}
+        api_search_url = "https://www.ebi.ac.uk/europepmc/webservices/rest/search"
+
+        try:
+            send_user_notification(
+                user_id,
+                task_id,
+                query_display_name,
+                'PROGRESS',
+                f'Запрос к {api_search_url}',
+                progress_percent=20,
+                source_api=current_api_name,
+                originating_reference_link_id=originating_reference_link_id,
+            )
+            response = requests.get(api_search_url, params=search_params, timeout=45)
+            # response.raise_for_status()
+            if response and response.status_code == 200:
+                data = response.json()
+            else:
+                send_user_notification(
+                    user_id,
+                    task_id,
+                    query_display_name,
+                    'NOT_FOUND',
+                    f'EUROPEPMC не удалось получить данные для {query_string}.',
+                    source_api=current_api_name,
+                    originating_reference_link_id=originating_reference_link_id,
+                )
+        except requests.exceptions.RequestException as exc:
+            send_user_notification(
+                user_id,
+                task_id,
+                query_display_name,
+                'RETRYING',
+                f'Ошибка сети/API {current_api_name}: {str(exc)}. Повтор...',
+                source_api=current_api_name,
+                originating_reference_link_id=originating_reference_link_id,
+            )
+            raise self.retry(exc=exc)
+        except json.JSONDecodeError as json_exc:
+            send_user_notification(
+                user_id,
+                task_id,
+                query_display_name,
+                'FAILURE',
+                f'Ошибка декодирования JSON от {current_api_name}: {str(json_exc)}',
+                source_api=current_api_name,
+                originating_reference_link_id=originating_reference_link_id,
+            )
+            return {'status': 'error', 'message': f'{current_api_name} JSON Decode Error: {str(json_exc)}'}
+
+        if not data or not data.get('resultList') or not data['resultList'].get('result'):
+            send_user_notification(
+                user_id,
+                task_id,
+                query_display_name,
+                'NOT_FOUND',
+                'Статья не найдена в Europe PMC.',
+                source_api=current_api_name,
+                originating_reference_link_id=originating_reference_link_id,
+            )
+            return {'status': 'not_found', 'message': 'Article not found in Europe PMC.', 'identifier': query_display_name}
+
+        api_article_data = data['resultList']['result'][0]
+        send_user_notification(
+            user_id,
+            task_id,
+            query_display_name,
+            'PROGRESS',
+            'Метаданные получены, обработка...',
+            progress_percent=40,
+            source_api=current_api_name,
+            originating_reference_link_id=originating_reference_link_id,
+        )
+
+        # Извлечение данных из ответа API EPMC
+        api_title = api_article_data.get('title')
+        api_abstract = api_article_data.get('abstractText')
+        api_doi = api_article_data.get('doi')
+        if api_doi:
+            api_doi = api_doi.lower()
+        api_pmid = api_article_data.get('pmid')
+        api_pmcid = api_article_data.get('pmcid')
+
+        api_pub_date_str = api_article_data.get('firstPublicationDate')
+        api_parsed_date = None
+        if api_pub_date_str:
+            try:
+                api_parsed_date = timezone.datetime.strptime(api_pub_date_str, '%Y-%m-%d').date()
+            except ValueError:
+                pass
+
+        api_journal_name = None
+        journal_info = api_article_data.get('journalInfo')
+        if journal_info and isinstance(journal_info, dict):
+            journal_details = journal_info.get('journal')
+            if journal_details and isinstance(journal_details, dict) and journal_details.get('title'):
+                api_journal_name = journal_details['title']
+
+        api_parsed_authors = parse_europepmc_authors(api_article_data.get('authorList', {}).get('author'))
+
+        # --- Загрузка полного текста по PMCID, если он есть ---
+        full_text_xml_content = None
+        if api_pmcid: # api_pmcid извлекается из api_article_data
+            # PMCID в Europe PMC API используется с префиксом 'PMC'
+            pmcid_for_url = api_pmcid if api_pmcid.upper().startswith('PMC') else f"PMC{api_pmcid}"
+            full_text_url = f"https://www.ebi.ac.uk/europepmc/webservices/rest/{pmcid_for_url}/fullTextXML"
+            send_user_notification(
+                user_id,
+                task_id,
+                query_display_name,
+                'PROGRESS',
+                f'Найден PMCID: {pmcid_for_url}. Запрос полного текста...',
+                progress_percent=50,
+                source_api=current_api_name,
+            )
+            try:
+                # headers={'User-Agent': f'ScientificPapersApp/1.0 ({APP_EMAIL})'}
+                headers = {'User-Agent': USER_AGENT_LIST[0]}
+                full_text_response = requests.get(full_text_url, timeout=90, headers=headers)
+                if full_text_response.status_code == 200:
+                    full_text_xml_content = full_text_response.text
+                    # print(f'******* EUROPEPMC**** pmcid_for_url: {pmcid_for_url}, full_text_xml_content: {full_text_xml_content}')
+                    send_user_notification(
+                        user_id,
+                        task_id,
+                        query_display_name,
+                        'INFO',
+                        'Полный текст JATS XML успешно получен из Europe PMC.',
+                        source_api=current_api_name,
+                    )
+                else:
+                    send_user_notification(
+                        user_id,
+                        task_id,
+                        query_display_name,
+                        'WARNING',
+                        f'Не удалось получить полный текст из EuropePMC для {pmcid_for_url} (статус: {full_text_response.status_code})',
+                        source_api=current_api_name,
+                    )
+            except Exception as exc:
+                send_user_notification(
+                    user_id,
+                    task_id,
+                    query_display_name,
+                    'WARNING',
+                    f'Ошибка при запросе полного текста из Europe PMC: {exc}',
+                    source_api=current_api_name,
+                )
+
+
+        article_data['current_api_name'] = current_api_name
+
+        if api_title:
+            article_data['title'] = api_title
+        if api_abstract:
+            article_data['abstract'] = api_abstract
+        if api_parsed_date:
+            article_data['publication_date'] = api_parsed_date
+        if api_journal_name:
+            article_data['journal_name'] = api_journal_name
+        if api_doi:
+            article_data['doi'] = api_doi
+        if api_pmid:
+            article_data['pubmed_id'] = api_pmid
+        if api_parsed_authors:
+            article_data['authors'] = api_parsed_authors
+
+        if full_text_xml_content:
+            article_data['article_contents']['full_text_xml_europepmc'] = full_text_xml_content # json.dumps(full_text_xml_pmc)
+
+        final_message = f'Статья {current_api_name} "{article_data['title'][:30]}..." получена.'
+        send_user_notification(
+            user_id,
+            task_id,
+            query_display_name,
+            'SUCCESS',
+            final_message,
+            progress_percent=100,
+            source_api=current_api_name,
+            originating_reference_link_id=originating_reference_link_id,
+        )
+        return {
+            'status': 'success',
+            'message': final_message,
+            'identifier': query_display_name,
+            'article_data': article_data,
+        }
+    except Exception as e:
+        error_message_for_user = f'Внутренняя ошибка {current_api_name}: {type(e).__name__} - {str(e)}'
+        self.update_state(
+            state='FAILURE',
+            meta={
+                'identifier': query_display_name,
+                'error': error_message_for_user,
+                'traceback': self.request.exc_info if hasattr(self.request, 'exc_info') else str(e)
+            }
+        )
+        send_user_notification(
+            user_id,
+            task_id,
+            query_display_name,
+            'FAILURE',
+            error_message_for_user,
+            source_api=current_api_name,
+            originating_reference_link_id=originating_reference_link_id,
+        )
+        return {'status': 'error', 'message': f'Внутренняя ошибка: {str(e)}', 'identifier': query_display_name}
+
+
+@shared_task(bind=True, max_retries=3, default_retry_delay=60)
 def fetch_data_from_rxiv_task(
     self,
     doi: str,
@@ -2437,7 +2736,7 @@ def process_full_text_and_create_segments_task(self, article_id: int, user_id: i
         # Находим JATS XML для этой статьи. Предпочитаем PMC, затем Rxiv, затем любой другой JATS.
         xml_content_entry = ArticleContent.objects.filter(
             article=article,
-            format_type__in=['full_text_xml_pmc', 'full_text_xml_rxvi']
+            format_type__in=['full_text_xml_pmc', 'full_text_xml_rxvi', 'full_text_xml_europepmc']
             # format_type__in=['pmc_fulltext_xml', 'rxiv_jats_xml_fulltext', 'xml_jats_fulltext']
         ).order_by('-retrieved_at').first()
 

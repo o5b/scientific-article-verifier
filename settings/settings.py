@@ -221,6 +221,7 @@ API_SOURCE_NAMES = {
     'PUBMED': 'pubmed_api',
     'EUROPEPMC': 'europepmc_api',
     'RXIV': 'rxiv_api',           # (общее для bioRxiv/medRxiv)
+    'SCIHUB': 'sci_hub',
     'SEMANTICSCHOLAR': 'semanticscholar_api',
     'ARXIV': 'arxiv_api',
     'OPENALEX': 'openalex_api',

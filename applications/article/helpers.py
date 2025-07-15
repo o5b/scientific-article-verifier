@@ -138,19 +138,22 @@ def parse_pubmed_authors_from_xml_metadata(author_list_node):
     return parsed_authors
 
 
-# def parse_europepmc_authors(authors_data_list):
-#     parsed_authors = []
-#     if not authors_data_list or not isinstance(authors_data_list, list):
-#         return parsed_authors
-#     for author_info_wrapper in authors_data_list:
-#         if isinstance(author_info_wrapper, dict) and 'author' in author_info_wrapper:
-#             for author_entry in author_info_wrapper['author']:
-#                 if isinstance(author_entry, dict) and 'fullName' in author_entry:
-#                     full_name = author_entry['fullName'].strip()
-#                     if full_name:
-#                         author, _ = Author.objects.get_or_create(full_name=full_name)
-#                         parsed_authors.append(author)
-#     return parsed_authors
+def parse_europepmc_authors(authors_data_list):
+    parsed_authors = []
+    if not authors_data_list or not isinstance(authors_data_list, list):
+        return parsed_authors
+    for author_info_wrapper in authors_data_list:
+        if isinstance(author_info_wrapper, dict) and 'author' in author_info_wrapper:
+            for author_entry in author_info_wrapper['author']:
+                if isinstance(author_entry, dict) and 'fullName' in author_entry:
+                    full_name = author_entry['fullName'].strip()
+                    if full_name:
+                        # author, _ = Author.objects.get_or_create(full_name=full_name)
+                        # parsed_authors.append(author)
+                        parsed_authors.append(
+                            {'full_name': full_name}
+                        )
+    return parsed_authors
 
 
 # def parse_s2_authors(authors_data_list):
@@ -533,12 +536,12 @@ def download_pdf_from_pmc(pdf_url: str):
                     # resp = page.request.get(pdf_url)
                     resp = page.request.get(download_url)
 
-                if resp.status == 200:
+                if resp and resp.status == 200:
                     if 'content-type' in resp.headers and 'application/pdf' in resp.headers['content-type']:
                         file_content = resp.body()
                         print(f'***** (download_pdf) pdf_url: {pdf_url}, \ndownload_url: {download_url}, \nheaders: {resp.headers}, \ncontent-type: {resp.headers['content-type']}, \nfile_content: {file_content[:1000]}')
                 else:
-                    print(f"*** DEBUG (download_pdf_from_pmc) *resp.status not 200* Download PDF from URL: {pdf_url}. Response: {resp}, response body length: {len(resp.body()) if resp.body() else ''}, resp.body(): {resp.body()[1000] if resp.body() else ''}")
+                    print(f"*** DEBUG (download_pdf_from_pmc) *resp.status not 200* Download PDF from URL: {pdf_url}. Response: {resp}")
 
                 # # Ждём загрузку после перехода
                 # with page.expect_download(timeout=60000) as download_info:
@@ -696,13 +699,12 @@ def download_pdf_from_scihub_box(doi: str):
                         #     file_content = tmp_file.read()
 
                         resp = page.request.get(pdf_url)
-                        if resp.status == 200:
+                        if resp and resp.status == 200:
                             if 'content-type' in resp.headers and resp.headers['content-type'] == 'application/pdf':
                                 file_content = resp.body()
                             # print(f'***** (download_pdf_from_scihub_box) DOI: {doi}, \nheaders: {resp.headers}, \ncontent-type: {resp.headers['content-type']}, \nfile_content[:4]: {file_content[:4]}, file_content: {file_content[:100]}')
                         else:
-                            logger.info(f"(download_pdf_from_scihub_box) Download PDF from URL: {pdf_url}. Response: {resp}, response body length: {len(resp.body()) if resp.body() else ''}")
-                            # print(f"*** (download_pdf_from_scihub_box) Download PDF from URL: {pdf_url}. Response: {resp}, response body length: {len(resp.body()) if resp.body() else ''}")
+                            logger.info(f"(download_pdf_from_scihub_box) Download PDF from URL: {pdf_url}. Response: {resp}")
 
                         logger.info(f"(download_pdf_from_scihub_box) DOI: {doi}, Download PDF from URL: {pdf_url}")
                     else:
