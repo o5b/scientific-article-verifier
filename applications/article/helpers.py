@@ -21,7 +21,7 @@ from patchright.sync_api import Browser, BrowserContext, Page, sync_playwright
 # from django.conf import settings
 from django.utils import timezone
 
-from .models import Article, ArticleAuthorOrder, ArticleContent, Author, ReferenceLink
+from .models import Article, ArticleAuthor, ArticleContent, Author, ReferenceLink
 
 logger = logging.getLogger(__name__)
 
@@ -781,3 +781,102 @@ def send_prompt_to_grok(prompt: str) -> str | None:
                 browser.close()
 
     return response_text
+
+
+def find_orcid(last_name: str, doi: str | None = None, pmid: str | None = None) -> dict:
+    """
+    Ищет ORCID автора по фамилии, DOI или PUBMED ID статьи через ORCID API.
+
+    Args:
+        last_name (str): Фамилия автора.
+        doi (str, optional): DOI статьи для дополнительной фильтрации.
+        pmid (str, optional): PMID статьи для дополнительной фильтрации.
+
+    Returns:
+        ORCID ID и его данные.
+    """
+    orcid_id = ''
+    orcid_data = {}
+    try:
+        # Базовый URL публичного API ORCID
+        base_url = "https://pub.orcid.org/v3.0"
+        headers = {'Accept': 'application/json'}
+        results = []
+
+        if not last_name:
+            error_msg = "Отсутствует фамилия для поиска ORCID."
+            print(error_msg)
+            return {'status': 'error', 'message': error_msg}
+
+        if not doi and not pmid:
+            error_msg = "Отсутствуют необходимые идентификаторы для поиска ORCID."
+            print(error_msg)
+            return {'status': 'error', 'message': error_msg}
+
+        # Выполняем поиск по фамилии и doi
+        if doi:
+            search_url = f"{base_url}/search/?q=family-name:{last_name.strip()}+AND+doi-self:{doi.strip()}"
+            print(f'1 search_url: {search_url}')
+
+            time.sleep(2)
+            response = requests.get(search_url, headers=headers)
+            response.raise_for_status()
+            data = response.json()
+
+            if data:
+                num_found = data.get('num-found', 0)
+                print(f'1 Найдено результатов: {num_found}')
+                results = data.get('result', [])
+                print(f'1 results: {results}')
+
+        # Выполняем поиск по фамилии и pmid
+        if not results or num_found !=1 and pmid:
+            if doi and pmid:
+                search_url = f"{base_url}/search/?q=family-name:{last_name.strip()}+AND+pmid-self:{pmid.strip()}"
+                print(f'2 search_url: {search_url}')
+
+                time.sleep(2)
+                response = requests.get(search_url, headers=headers)
+                response.raise_for_status()
+                data = response.json()
+
+                if data:
+                    num_found = data.get('num-found', 0)
+                    print(f'2 Найдено результатов: {num_found}')
+                    results = data.get('result', [])
+                    print(f'2 results: {results}')
+
+        # Получаем все данные для orcid_id
+        if results and num_found == 1:
+            orcid_id = results[0].get('orcid-identifier', {}).get('path')
+            print(f'orcid_id: {orcid_id}')
+            if orcid_id:
+                orcid_url = f"{base_url}/{orcid_id}"
+                print(f'orcid_url: {orcid_url}')
+                try:
+                    time.sleep(2)
+                    orcid_response = requests.get(orcid_url, headers=headers)
+                    orcid_response.raise_for_status()
+                    orcid_data = orcid_response.json()
+                except requests.exceptions.RequestException as e:
+                    error_msg = f"Ошибка при получении данных для ORCID {orcid_id}: {e}"
+                    print(error_msg)
+                    return {'status': 'error', 'message': error_msg}
+        else:
+            error_msg = f"Нет данных для ORCID {orcid_id}"
+            print(error_msg)
+            return {'status': 'error', 'message': error_msg}
+
+    except requests.exceptions.HTTPError as e:
+        if e.response.status_code == 500:
+            error_msg = f"Сервер ORCID вернул ошибку 500 для запроса: {search_url}. Попробуйте позже."
+        else:
+            error_msg = f"Ошибка при выполнении запроса к ORCID API: {e}"
+        print(error_msg)
+        return {'status': 'error', 'message': error_msg}
+    except requests.exceptions.RequestException as e:
+        error_msg = f"Ошибка при выполнении запроса к ORCID API: {e}"
+        print(error_msg)
+        return {'status': 'error', 'message': error_msg}
+
+    return {'status': 'success', 'orcid_id': orcid_id, 'orcid_data': orcid_data}

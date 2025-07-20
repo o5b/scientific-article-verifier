@@ -39,8 +39,9 @@ from .helpers import (
     # reconstruct_abstract_from_inverted_index,
     send_prompt_to_grok,
     send_user_notification,
+    find_orcid,
 )
-from .models import AnalyzedSegment, Article, ArticleAuthorOrder, ArticleContent, Author, ReferenceLink
+from .models import AnalyzedSegment, Article, ArticleAuthor, ArticleContent, Author, ReferenceLink
 
 # --- Константы API из настроек ---
 APP_EMAIL = getattr(settings, 'APP_EMAIL', 'transposons.chat@gmail.com') # РЕАЛЬНЫЙ EMAIL в settings.py или здесь
@@ -1018,16 +1019,31 @@ def process_data_task(
         print(f'*** DEBUG (process_data_task) author_list: {author_list}')
         if author_list:
             for author in author_list:
+                author_obj = None
+                author_orcid = None
                 if author['full_name']:
                     try:
-                        Author.objects.update_or_create(
-                            full_name=author['full_name'],
+                        author_obj, author_created = Author.objects.update_or_create(
+                            full_name=author['full_name'].strip().replace('.', ''),
                             defaults={
                                 'first_name': author['first_name'],
                                 'last_name': author['last_name'],
                                 'affiliation': author['affiliations'],
                             }
                         )
+                        print(f'********* author_created: {author_created}, author_obj: {author_obj}')
+                        if author_obj:
+                            if author['last_name'] and (article.doi or article.pubmed_id):
+                                find_orcid_result = find_orcid(author['last_name'], article.doi, article.pubmed_id)
+                                author_orcid = find_orcid_result.get('orcid_id')
+                                print(f'********** ORCID ID: {author_orcid}')
+                                if author_orcid:
+                                    if not Author.objects.filter(orcid=author_orcid):
+                                        print('**** author orcid not exist')
+                                        if not author_obj.orcid:
+                                            author_obj.orcid = author_orcid
+                                            author_obj.save()
+                            ArticleAuthor.objects.get_or_create(article=article, author=author_obj)
                     except Exception as e_author:
                         send_user_notification(
                             user_id,
@@ -1827,6 +1843,7 @@ def fetch_data_from_pubmed_task(
 
         full_text_xml_pmc = None
         pdf_file_name = None
+        pmc_pdf_url = None
         # pdf_to_save = None
 
         if api_pmcid:
@@ -3032,9 +3049,15 @@ def analyze_segment_with_llm_task(self, analyzed_segment_id: int, user_id: int):
 
     try:
         if getattr(settings, 'LLM_PROVIDER_FOR_ANALYSIS', None) == "OpenAI" and settings.OPENAI_API_KEY:
-            client = OpenAI(api_key=settings.OPENAI_API_KEY)
+            # client = OpenAI(api_key=settings.OPENAI_API_KEY)
             # llm_model_used = "gpt-3.5-turbo" # или gpt-4o, gpt-4-turbo
-            llm_model_used = getattr(settings, 'OPENAI_DEFAULT_MODEL', 'gpt-4o-mini')
+            # llm_model_used = getattr(settings, 'OPENAI_DEFAULT_MODEL', 'gpt-4o-mini')
+
+            client = OpenAI(
+                base_url="http://80.209.242.40:8000/v1",
+                api_key="dummy-key"
+            )
+            llm_model_used = "llama-3.3-70b-instruct"
 
             chat_completion = client.chat.completions.create(
                 model=llm_model_used,
@@ -3051,6 +3074,7 @@ def analyze_segment_with_llm_task(self, analyzed_segment_id: int, user_id: int):
                 # temperature=0.3, # Более детерминированный ответ
                 response_format={"type": "json_object"} # Если используете GPT-4 Turbo или новее с поддержкой JSON mode
             )
+
             raw_llm_output = chat_completion.choices[0].message.content
             print(f"***** OpenAI raw_llm_output: {raw_llm_output}") # Для отладки
             try:

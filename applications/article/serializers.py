@@ -1,6 +1,6 @@
 from rest_framework import serializers
 
-from .models import AnalyzedSegment, Article, ArticleAuthorOrder, ArticleContent, Author, ReferenceLink, User
+from .models import AnalyzedSegment, Article, ArticleAuthor, ArticleContent, Author, ReferenceLink, User
 
 
 class UserSerializer(serializers.ModelSerializer):
@@ -68,21 +68,21 @@ class ReferenceLinkSerializer(serializers.ModelSerializer):
         return super().update(instance, validated_data)
 
 
-class ArticleAuthorOrderSerializer(serializers.ModelSerializer):
+class ArticleAuthorSerializer(serializers.ModelSerializer):
     """Сериализатор для отображения авторов с порядком в статье."""
     # author = AuthorSerializer(read_only=True) # Если хотим полную инфу об авторе
     author_id = serializers.PrimaryKeyRelatedField(queryset=Author.objects.all(), source='author')
     author_name = serializers.StringRelatedField(source='author.full_name', read_only=True)
 
     class Meta:
-        model = ArticleAuthorOrder
-        fields = ['author_id', 'author_name', 'order']
+        model = ArticleAuthor
+        fields = ['author_id', 'author_name']
 
 
 class ArticleSerializer(serializers.ModelSerializer):
     user = UserSerializer(read_only=True)
     user_id = serializers.PrimaryKeyRelatedField(queryset=User.objects.all(), source='user', write_only=True, required=False)
-    article_authors = ArticleAuthorOrderSerializer(source='articleauthororder_set', many=True, required=False)
+    article_authors = ArticleAuthorSerializer(source='articleauthor_set', many=True, required=False)
     contents = ArticleContentSerializer(many=True, read_only=True)
     references_made = ReferenceLinkSerializer(many=True, read_only=True)
     # structured_content по умолчанию будет доступен для записи, т.к. это JSONField
@@ -106,7 +106,7 @@ class ArticleSerializer(serializers.ModelSerializer):
     def update(self, instance, validated_data):
         # Стандартное обновление полей, включая structured_content, если оно есть в validated_data
         # authors_data нужно обработать до super().update, если он не обрабатывает вложенные M2M по умолчанию
-        authors_data = validated_data.pop('articleauthororder_set', None)
+        authors_data = validated_data.pop('articleauthor_set', None)
 
         # Обновляем поля, которые не являются M2M или специальными
         # structured_content будет обновлен через super().update()
@@ -114,18 +114,20 @@ class ArticleSerializer(serializers.ModelSerializer):
 
         # Обработка авторов (если были переданы)
         if authors_data is not None:
-            instance.articleauthororder_set.all().delete()
+            instance.articleauthor_set.all().delete()
             for author_data in authors_data:
                 # Убедимся, что author_data['author'] - это объект Author
                 author_instance = author_data.get('author')
                 if isinstance(author_instance, Author):
-                     ArticleAuthorOrder.objects.create(article=instance, author=author_instance, order=author_data.get('order',0))
+                    ArticleAuthor.objects.create(article=instance, author=author_instance)
+                    #  ArticleAuthor.objects.create(article=instance, author=author_instance, order=author_data.get('order',0))
                 elif isinstance(author_instance, int): # Если передан ID
-                     try:
-                         author_obj = Author.objects.get(pk=author_instance)
-                         ArticleAuthorOrder.objects.create(article=instance, author=author_obj, order=author_data.get('order',0))
-                     except Author.DoesNotExist:
-                         pass # Логировать ошибку или пропустить
+                    try:
+                        author_obj = Author.objects.get(pk=author_instance)
+                        ArticleAuthor.objects.create(article=instance, author=author_obj)
+                        # ArticleAuthor.objects.create(article=instance, author=author_obj, order=author_data.get('order',0))
+                    except Author.DoesNotExist:
+                        pass # Логировать ошибку или пропустить
 
         return instance
 

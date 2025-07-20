@@ -199,11 +199,17 @@
     <dl class="metadata-grid">
         <dt>Авторы:</dt>
         <dd>
-            {% for author_order in article.articleauthororder_set.all %}
-                {{ author_order.author.full_name }}{% if not forloop.last %}; {% endif %}
+            {% for author in article.authors.all %}
+                {{ author.full_name }}{% if not forloop.last %}; {% endif %}
             {% empty %}
                 Не указаны
             {% endfor %}
+
+            {% comment %} {% for author in article.articleauthor_set.all %}
+                {{ author.author.full_name }}{% if not forloop.last %}; {% endif %}
+            {% empty %}
+                Не указаны
+            {% endfor %} {% endcomment %}
         </dd>
         <dt>DOI:</dt><dd>{{ article.doi|default:"-" }}</dd>
         <dt>PMID:</dt><dd>{{ article.pubmed_id|default:"-" }}</dd>

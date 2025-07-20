@@ -3,16 +3,13 @@ from django import forms
 from django.contrib import admin
 from django.utils.html import format_html, mark_safe
 
-from .models import AnalyzedSegment, Article, ArticleAuthorOrder, ArticleContent, Author, ReferenceLink
+from .models import AnalyzedSegment, Article, ArticleAuthor, ArticleContent, Author, ReferenceLink
 
 
-class ArticleAuthorOrderInline(admin.TabularInline):
-    """
-    Позволяет редактировать порядок авторов прямо на странице статьи.
-    """
-    model = ArticleAuthorOrder
+class ArticleAuthorInline(admin.TabularInline):
+    model = ArticleAuthor
     extra = 0
-    autocomplete_fields = ['author']
+    autocomplete_fields = ['author', 'article']
 
 
 class ArticleContentInline(admin.StackedInline):
@@ -66,9 +63,10 @@ class ReferenceLinkInline(SortableStackedInline):
 
 @admin.register(Author)
 class AuthorAdmin(admin.ModelAdmin):
-    list_display = ('full_name', 'orcid', 'created')
+    list_display = ('full_name', 'pk', 'orcid', 'created')
     search_fields = ('full_name', 'last_name', 'orcid')
     readonly_fields = ('created', 'updated')
+    inlines = [ArticleAuthorInline]
     # fieldsets = (
     #     (None, {
     #         'fields': ('full_name', 'first_name', 'middle_name', 'last_name')
@@ -84,6 +82,11 @@ class AuthorAdmin(admin.ModelAdmin):
     #         'classes': ('collapse',)
     #     }),
     # )
+
+
+@admin.register(ArticleAuthor)
+class ArticleAuthorAdmin(admin.ModelAdmin):
+    list_display = ['pk', 'author', 'article']
 
 
 class ArticleAdminForm(forms.ModelForm):
@@ -109,7 +112,7 @@ class ArticleAdmin(SortableAdminBase, admin.ModelAdmin):
         'is_pdf_file',
         # 'best_oa_pdf_url',
         'user',
-        'primary_source_api',
+        'primary_source_api_label',
         'publication_date',
         'is_manually_added_full_text',
         'updated_at'
@@ -117,8 +120,8 @@ class ArticleAdmin(SortableAdminBase, admin.ModelAdmin):
     list_filter = ('publication_date', 'primary_source_api', 'is_manually_added_full_text', 'user')
     search_fields = ('title', 'doi', 'pubmed_id', 'pmc_id', 'arxiv_id', 'abstract', 'authors__full_name')
     readonly_fields = ('created_at', 'updated_at')
-    autocomplete_fields = ['user'] # Если пользователей много
-    inlines = [ArticleAuthorOrderInline, ArticleContentInline, ReferenceLinkInline]
+    autocomplete_fields = ['user']
+    inlines = [ArticleAuthorInline, ArticleContentInline, ReferenceLinkInline]
     form = ArticleAdminForm
 
     fieldsets = (
@@ -165,6 +168,10 @@ class ArticleAdmin(SortableAdminBase, admin.ModelAdmin):
     def pmc_id_label(self, obj):
         return obj.pmc_id
     pmc_id_label.short_description = 'PMC'
+
+    def primary_source_api_label(self, obj):
+        return obj.primary_source_api
+    primary_source_api_label.short_description = 'Источник'
 
 
 @admin.register(AnalyzedSegment)

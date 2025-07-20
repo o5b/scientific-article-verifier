@@ -67,9 +67,9 @@ class Author(models.Model):
         ordering = ['order']
 
     def __str__(self):
-        if self.orcid:
-            return f'{self.id}: {self.full_name}, {self.orcid}'
-        return f'{self.id}: {self.full_name}'
+        # if self.orcid:
+        return f'{self.full_name}, {self.orcid}' if self.orcid else f'{self.full_name}'
+        # return f'{self.full_name}'
 
 
 class Article(models.Model):
@@ -86,16 +86,17 @@ class Article(models.Model):
     )
 
     authors = models.ManyToManyField(
-        Author,
-        through='ArticleAuthorOrder', # Промежуточная модель для указания порядка авторов
+        to=Author,
+        through='ArticleAuthor', # Промежуточная модель для указания порядка авторов
         related_name='articles',
-        verbose_name=_("Авторы")
+        verbose_name=_("Авторы"),
+        blank=True,
     )
 
     abstract = models.TextField(
-         verbose_name=_("Аннотация"),
-         null=True,
-         blank=True
+        verbose_name=_("Аннотация"),
+        null=True,
+        blank=True
     )
 
     # --- Идентификаторы ---
@@ -344,8 +345,8 @@ class Article(models.Model):
         return self.title[:100] # Возвращаем первые 100 символов названия
 
 
-class ArticleAuthorOrder(models.Model):
-    """Промежуточная модель для связи Article и Author с указанием порядка."""
+class ArticleAuthor(models.Model):
+    """Промежуточная модель для связи Article и Author."""
     article = models.ForeignKey(
         Article,
         on_delete=models.CASCADE
@@ -363,19 +364,29 @@ class ArticleAuthorOrder(models.Model):
         blank=True,
     )
 
-    order = models.PositiveIntegerField(
-        verbose_name=_("Порядок"),
-        default=0
+    created_at = models.DateTimeField(
+        verbose_name=_("Дата создания"),
+        auto_now_add=True
     )
 
+    updated_at = models.DateTimeField(
+        verbose_name=_("Дата обновления"),
+        auto_now=True
+    )
+
+    # order = models.PositiveIntegerField(
+    #     verbose_name=_("Порядок"),
+    #     default=0
+    # )
+
     class Meta:
-        verbose_name = _("Порядок автора статьи")
-        verbose_name_plural = _("Порядки авторов статей")
-        ordering = ['order']
+        verbose_name = _("Автора статьи")
+        verbose_name_plural = _("Авторы статей")
+        # ordering = ['order']
         unique_together = ('article', 'author') # Автор не может быть дважды в одной статье
-        constraints = [
-            models.UniqueConstraint(fields=['article', 'order'], name='unique_author_order_per_article')
-        ]
+        # constraints = [
+        #     models.UniqueConstraint(fields=['article'], name='unique_author_per_article')
+        # ]
 
 
 class ArticleContent(models.Model):

@@ -36,7 +36,8 @@
 </div>
 
 <h2>{% trans 'Добавить или обновить статью' %}</h2>
-<p>{% trans 'Введите идентификатор статьи (например, DOI, PMID, arXiv ID) для начала обработки.' %}</p>
+<h3>{% trans 'На данный момент доступны статьи только на био/мед тематику с PUBMED, EUROPEPMC, BIORXIV/MEDRXIV' %}</h3>
+<p>{% trans 'Введите идентификатор статьи (например, DOI, PMID) для начала обработки.' %}</p>
 
 <form id="articleProcessForm" style="margin-bottom: 20px;">
     <div>
@@ -44,7 +45,7 @@
         <select id="identifier_type" name="type">
             <option value="DOI" selected>DOI</option>
             <option value="PMID">PMID</option>
-            <option value="ARXIV">ARXIV ID</option>
+            {% comment %} <option value="ARXIV">ARXIV ID</option> {% endcomment %}
         </select>
     </div>
     <div>

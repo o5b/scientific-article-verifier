@@ -227,3 +227,9 @@ API_SOURCE_NAMES = {
     'OPENALEX': 'openalex_api',
     'UNPAYWALL': 'unpaywall_api', # Unpaywall дополняет, а не предоставляет основные метаданные
 }
+
+
+try:
+    from .local_settings import *
+except ImportError:
+    pass

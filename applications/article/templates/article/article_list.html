@@ -63,7 +63,7 @@
                     </h3>
                     <p><strong>DOI:</strong> {{ item_data.primary_article.doi|default:"N/A" }}</p>
                     <p><strong>PMID:</strong> {{ item_data.primary_article.pubmed_id|default:"N/A" }}</p>
-                    <p><strong>{% trans 'Статус OA (Unpaywall):' %}</strong> {{ item_data.primary_article.oa_status|default:"Неизвестно" }}</p>
+                    {% comment %} <p><strong>{% trans 'Статус OA (Unpaywall):' %}</strong> {{ item_data.primary_article.oa_status|default:"Неизвестно" }}</p> {% endcomment %}
                     {% if item_data.primary_article.best_oa_pdf_url %}
                         <p><a href="{{ item_data.primary_article.best_oa_pdf_url }}" target="_blank" rel="noopener noreferrer">{% trans 'Ссылка на OA PDF' %}</a></p>
                     {% elif item_data.primary_article.best_oa_url %}
