@@ -40,6 +40,7 @@ from .helpers import (
     send_prompt_to_grok,
     send_user_notification,
     find_orcid,
+    get_xml_from_biorxiv,
 )
 from .models import AnalyzedSegment, Article, ArticleAuthor, ArticleContent, Author, ReferenceLink
 
@@ -915,7 +916,7 @@ def process_data_task(
                         f'RXVI: Начало получения PDF файла для DOI: {article.doi}...',
                         source_api=current_api_name
                     )
-                    pdf_to_save, pdf_url = download_pdf_from_rxiv(article.doi, article_data['rxiv_version'])
+                    pdf_url, pdf_to_save = download_pdf_from_rxiv(article.doi, article_data['rxiv_version'])
                     if pdf_to_save:
                         current_api_name = settings.API_SOURCE_NAMES['RXIV']
                         send_user_notification(
@@ -2482,13 +2483,26 @@ def fetch_data_from_rxiv_task(
                 source_api=current_api_name
             )
             try:
-                time.sleep(5)
-                # headers = {'User-Agent': f'{USER_AGENT_LIST[0]} (mailto:{APP_EMAIL})'}
-                headers = {'User-Agent': f'{USER_AGENT_LIST[0]}'}
-                jats_response = requests.get(api_jats_xml_url, timeout=60, headers=headers)
-                print(f'*** DEBUG (fetch_data_from_rxiv_task) RXIV headers: {headers} \napi_jats_xml_url: {api_jats_xml_url} \njats_response: {jats_response}')
-                jats_response.raise_for_status()
-                full_text_xml_rxvi = jats_response.text
+                time.sleep(2)
+                # # headers = {'User-Agent': f'{USER_AGENT_LIST[0]} (mailto:{APP_EMAIL})'}
+                # headers = {'User-Agent': f'{USER_AGENT_LIST[0]}'}
+                # jats_response = requests.get(api_jats_xml_url, timeout=60, headers=headers)
+                # print(f'*** DEBUG (fetch_data_from_rxiv_task) RXIV headers: {headers} \napi_jats_xml_url: {api_jats_xml_url} \njats_response: {jats_response}')
+                # jats_response.raise_for_status()
+                # full_text_xml_rxvi = jats_response.text
+                response_biorxiv = get_xml_from_biorxiv(api_jats_xml_url)
+                if response_biorxiv['status'] == 'success':
+                    full_text_xml_rxvi = response_biorxiv['data']
+                elif response_biorxiv['status'] == 'error':
+                    print(f'*** DEBUG (get_xml_from_biorxiv) ERROR: {response_biorxiv['message']}')
+                    send_user_notification(
+                        user_id,
+                        task_id,
+                        query_display_name,
+                        'WARNING',
+                        f'Не удалось получить JATS XML от Rxiv: {response_biorxiv['message']}',
+                        source_api=current_api_name
+                    )
             except Exception as e_jats:
                 send_user_notification(
                     user_id,

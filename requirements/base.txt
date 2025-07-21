@@ -16,6 +16,7 @@ click==8.2.1
 click-didyoumean==0.3.1
 click-plugins==1.1.1.2
 click-repl==0.3.0
+cloudscraper==1.2.71
 constantly==23.10.4
 cron-descriptor==1.4.5
 cryptography==45.0.5
@@ -50,11 +51,13 @@ pydantic==2.11.7
 pydantic_core==2.33.2
 pyee==13.0.0
 pyOpenSSL==25.1.0
+pyparsing==3.2.3
 python-crontab==3.3.0
 python-dateutil==2.9.0.post0
 python-dotenv==1.1.1
 redis==6.2.0
 requests==2.32.4
+requests-toolbelt==1.0.0
 service-identity==24.2.0
 setuptools==80.9.0
 six==1.17.0

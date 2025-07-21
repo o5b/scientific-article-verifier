@@ -7,19 +7,21 @@ import time
 import traceback
 import xml.etree.ElementTree as ET  # Для парсинга XML
 
+import cloudscraper
+
 # import os
 import requests
 from asgiref.sync import async_to_sync, sync_to_async
 from channels.layers import get_channel_layer
 
-# from datetime import datetime, timedelta
-# from playwright.sync_api import sync_playwright, TimeoutError as PlaywrightTimeoutError, Error as PlaywrightError
-from patchright.sync_api import Browser, BrowserContext, Page, sync_playwright
-
 # from scidownl import scihub_download
 # from scidownl.core.updater import SearchScihubDomainUpdater
 # from django.conf import settings
 from django.utils import timezone
+
+# from datetime import datetime, timedelta
+# from playwright.sync_api import sync_playwright, TimeoutError as PlaywrightTimeoutError, Error as PlaywrightError
+from patchright.sync_api import Browser, BrowserContext, Page, sync_playwright
 
 from .models import Article, ArticleAuthor, ArticleContent, Author, ReferenceLink
 
@@ -584,56 +586,89 @@ def download_pdf_from_pmc(pdf_url: str):
     return file_content, download_url
 
 
+# def download_pdf_from_rxiv(doi: str, rxiv_version: str):
+#     file_content = b''
+#     pdf_link = ''
+#     try:
+
+#         for api_server in ['biorxiv', 'medrxiv']:
+#             url_html = f"https://www.{api_server}.org/content/{doi}v{rxiv_version}"
+#             print(f"[+] (download_pdf_from_rxiv) Открываю страницу с HTML: {url_html}")
+
+#             with sync_playwright() as pw:
+#                 browser = pw.chromium.launch(headless=True)
+#                 context = browser.new_context()
+#                 page = context.new_page()
+
+#                 try:
+#                     page.goto(url_html, wait_until='load')
+#                     time.sleep(3)
+
+#                     # найти ссылку на PDF в DOM и перейти по ней
+#                     pdf_href_attr = f'a[href$="{doi}v{rxiv_version}.full.pdf"]'
+#                     pdf_link = page.get_attribute(pdf_href_attr, 'href')
+
+#                     if pdf_link:
+#                         # Полный URL (он может быть относительным)
+#                         if pdf_link.startswith('/'):
+#                             pdf_link = f"https://www.biorxiv.org{pdf_link}"
+#                         print(f"[+] (download_pdf_from_rxiv) PDF URL Link: {pdf_link}")
+
+#                         # скачать PDF через API playwright
+#                         response = context.request.get(pdf_link)
+#                         if response.ok and 'application/pdf' in response.headers.get('content-type', ''):
+#                             if response.body()[:4] == b'%PDF':
+#                                 if response.body() > file_content:
+#                                     file_content = response.body()
+#                         else:
+#                             print(f"[!] (download_pdf_from_rxiv) Не удалось получить PDF (status={response.status}, url_html: {url_html})")
+#                     else:
+#                         print(f"*** (download_pdf_from_rxiv) pdf_link Do Not Found! Download PDF from URL: {url_html}")
+
+#                 except Exception as e:
+#                     print(f"*** (download_pdf_from_rxiv) Error Download PDF from URL: {url_html}. \nError Msg: {str(e)} \nTraceback: {traceback.print_exc()}")
+#                 finally:
+#                     browser.close()
+
+#     except Exception as e:
+#         print(f"*** (download_pdf_from_rxiv) Error Download PDF for DOI: {doi}, rxiv_version: {rxiv_version}. \nError Msg: {str(e)} \nTraceback: {traceback.print_exc()}")
+
+#     print(f"[+] (download_pdf_from_rxiv) PDF Download Succes! URL Link: {pdf_link}, \nfile_content: {file_content[:100] if len(file_content) > 100 else ''}")
+
+#     return file_content, pdf_link
+
 def download_pdf_from_rxiv(doi: str, rxiv_version: str):
     file_content = b''
     pdf_link = ''
     try:
+        scraper = cloudscraper.create_scraper(browser={'browser': 'chrome', 'platform': 'windows', 'mobile': False})
 
         for api_server in ['biorxiv', 'medrxiv']:
-            url_html = f"https://www.{api_server}.org/content/{doi}v{rxiv_version}"
-            print(f"[+] (download_pdf_from_rxiv) Открываю страницу с HTML: {url_html}")
+            pdf_link = f"https://www.{api_server}.org/content/{doi}v{rxiv_version}.full.pdf"
 
-            with sync_playwright() as pw:
-                browser = pw.chromium.launch(headless=True)
-                context = browser.new_context()
-                page = context.new_page()
-
-                try:
-                    page.goto(url_html, wait_until='load')
-                    time.sleep(3)
-
-                    # найти ссылку на PDF в DOM и перейти по ней
-                    pdf_href_attr = f'a[href$="{doi}v{rxiv_version}.full.pdf"]'
-                    pdf_link = page.get_attribute(pdf_href_attr, 'href')
-
-                    if pdf_link:
-                        # Полный URL (он может быть относительным)
-                        if pdf_link.startswith('/'):
-                            pdf_link = f"https://www.biorxiv.org{pdf_link}"
-                        print(f"[+] (download_pdf_from_rxiv) PDF URL Link: {pdf_link}")
-
-                        # скачать PDF через API playwright
-                        response = context.request.get(pdf_link)
-                        if response.ok and 'application/pdf' in response.headers.get('content-type', ''):
-                            if response.body()[:4] == b'%PDF':
-                                if response.body() > file_content:
-                                    file_content = response.body()
-                        else:
-                            print(f"[!] (download_pdf_from_rxiv) Не удалось получить PDF (status={response.status}, url_html: {url_html})")
-                    else:
-                        print(f"*** (download_pdf_from_rxiv) pdf_link Do Not Found! Download PDF from URL: {url_html}")
-
-                except Exception as e:
-                    print(f"*** (download_pdf_from_rxiv) Error Download PDF from URL: {url_html}. \nError Msg: {str(e)} \nTraceback: {traceback.print_exc()}")
-                finally:
-                    browser.close()
+            response = scraper.get(pdf_link)
+            response.raise_for_status()
+            if response.ok and 'application/pdf' in response.headers.get('content-type', ''):
+                file_content = response.content
+                if file_content:
+                    print(f"[+] (download_pdf_from_rxiv) PDF Download Succes! URL Link: {pdf_link}")
+                    break
 
     except Exception as e:
-        print(f"*** (download_pdf_from_rxiv) Error Download PDF for DOI: {doi}, rxiv_version: {rxiv_version}. \nError Msg: {str(e)} \nTraceback: {traceback.print_exc()}")
+        print(f"*** (download_pdf_from_rxiv) Error Download PDF for DOI: {doi}, rxiv_version: {rxiv_version}, url: {pdf_link},  \nError Msg: {e} \nTraceback: {traceback.print_exc()}")
 
-    print(f"[+] (download_pdf_from_rxiv) PDF Download Succes! URL Link: {pdf_link}, \nfile_content: {file_content[:100] if len(file_content) > 100 else ''}")
+    return pdf_link, file_content
 
-    return file_content, pdf_link
+
+def get_xml_from_biorxiv(url):
+    try:
+        scraper = cloudscraper.create_scraper(browser={'browser': 'chrome', 'platform': 'windows', 'mobile': False})
+        response = scraper.get(url)
+        response.raise_for_status()
+        return {'status': 'success', 'data': response.text}
+    except Exception as e:
+        print(f"*** (get_xml_from_biorxiv) Error Download XML from URL: {url} \nError Msg: \n{e} \nTraceback: \n{traceback.print_exc()}")
+        return {'status': 'error', 'message': str(e)}
 
 
 def download_pdf_from_scihub_box(doi: str):
