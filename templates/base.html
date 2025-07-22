@@ -141,7 +141,13 @@
                 <a href="{% url 'article_list' %}">{% trans 'Мои статьи' %}</a>
                 <a href="{% url 'submit_article' %}">{% trans 'Добавить статью' %}</a>
                 <span>{% trans 'Привет,' %} {{ user.username }}!</span>
-                <a href="{% url 'logout' %}">{% trans 'Выйти' %}</a>
+                <span>
+                    <form id="logout-form" method="post" action="{% url 'logout' %}" style="display:none;">
+                        {% csrf_token %}
+                    </form>
+                    <a href="#" onclick="document.getElementById('logout-form').submit(); return false;">{% trans 'Выйти' %}</a>
+                </span>
+
             {% else %}
                 <a href="{% url 'login' %}">{% trans 'Войти' %}</a>
             {% endif %}
