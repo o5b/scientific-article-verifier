@@ -131,6 +131,7 @@ AUTH_PASSWORD_VALIDATORS = [
 
 
 LOGIN_REDIRECT_URL = 'submit_article'  # Имя URL-маршрута, куда перенаправлять после входа
+LOGOUT_REDIRECT_URL = 'login'        # Имя URL-маршрута, куда перенаправлять после выхода
 
 
 # Internationalization

@@ -5,29 +5,66 @@
 {% block title %}{% trans 'Вход в систему' %}{% endblock %}
 
 {% block content %}
-    <h2>{% trans 'Вход в систему' %}</h2>
+<style>
+    .login-form{
+        max-width: 600px;
+        width: 100%;
+        margin: auto;
+        padding: 20px;
+        border-radius: var(--border-radius);
+        border:1px solid var(--border-color);
+        display: flex;
+        flex-direction: column;
+    }
 
-    {% if form.errors %}
-        <p style="color:red;">{% trans 'Ваше имя пользователя и пароль не совпали. Пожалуйста, попробуйте еще раз.' %}</p>
-    {% endif %}
+    .login-form h2{
+        margin: 0;
+        margin-bottom: 20px;
+    }
 
-    <form method="post" action="{% url 'login' %}">
-        {% csrf_token %}
-        <p>
-            {{ form.username.label_tag }}
-            {{ form.username }}
-        </p>
+    .login-form form {
+        display: flex;
+        flex-direction: column;
+        gap: 10px;
+    }
 
-        <p>
-            {{ form.password.label_tag }}
-            {{ form.password }}
-        </p>
+    .login-form form input {
+         width: 100%;
+         margin: 0;
+         margin-top: 5px;
+    }
 
-        <button type="submit">{% trans 'Войти' %}</button>
+</style>
 
-        <input type="hidden" name="next" value="{{ next }}">
-    </form>
+<div class="container">
+    <div class="login-form">
+        <h2 style="text-align: center;">{% trans 'Вход в систему' %}</h2>
 
-    {# TODO: Надо добавить сброс пароля по ссылке ниже #}
-    {# <p><a href="{% url 'password_reset' %}">{% trans 'Забыли пароль?' %}</a></p> #}
+        <form method="post" action="{% url 'login' %}">
+            {% csrf_token %}
+            <div>
+                {{ form.username.label_tag }}
+                {{ form.username }}
+            </div>
+
+            <div>
+                {{ form.password.label_tag }}
+                {{ form.password }}
+            </div>
+
+            {% if form.errors %}
+                <p style="color:red; margin: 5px 0; text-align: center;">{% trans 'Ваше имя пользователя и пароль не совпали. Пожалуйста, попробуйте еще раз.' %}</p>
+            {% endif %}
+
+            <button type="submit">{% trans 'Войти' %}</button>
+
+            <input type="hidden" name="next" value="{{ next }}">
+        </form>
+
+
+        {# TODO: Надо добавить сброс пароля по ссылке ниже #}
+        {# <p><a href="{% url 'password_reset' %}">{% trans 'Забыли пароль?' %}</a></p> #}
+
+    </div>
+</div>
 {% endblock %}

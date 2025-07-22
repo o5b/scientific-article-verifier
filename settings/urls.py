@@ -2,7 +2,7 @@ from django.conf import settings
 from django.conf.urls.static import static
 from django.contrib import admin
 from django.contrib.auth import views as auth_views
-from django.urls import include, path, reverse_lazy
+from django.urls import include, path
 
 
 urlpatterns = [
@@ -11,7 +11,7 @@ urlpatterns = [
 
     # Стандартные URL для аутентификации Django
     path('accounts/login/', auth_views.LoginView.as_view(template_name='registration/login.html'), name='login'),
-    path('accounts/logout/', auth_views.LogoutView.as_view(next_page=reverse_lazy('login')), name='logout'),
+    path('accounts/logout/', auth_views.LogoutView.as_view(next_page='login'), name='logout'), # next_page можно изменить
     # Позже можно добавить:
     # path('accounts/password_change/', auth_views.PasswordChangeView.as_view(), name='password_change'),
     # path('accounts/password_change/done/', auth_views.PasswordChangeDoneView.as_view(), name='password_change_done'),
@@ -19,7 +19,7 @@ urlpatterns = [
     # path('accounts/password_reset/done/', auth_views.PasswordResetDoneView.as_view(), name='password_reset_done'),
     # path('accounts/reset/<uidb64>/<token>/', auth_views.PasswordResetConfirmView.as_view(), name='password_reset_confirm'),
     # path('accounts/reset/done/', auth_views.PasswordResetCompleteView.as_view(), name='password_reset_complete'),
-    # path('accounts/signup/', views.signup_view, name='signup'),
+    # path('accounts/signup/', views.signup_view, name='signup'), # Для регистрации (потребует своего view и формы)
 
     path('', include('applications.article.urls_site')),
 ]
