@@ -551,7 +551,10 @@
               {% if user.is_authenticated %}
               <!-- {% trans 'Привет,' %} -->
               <button class="profile-button" title="{{ user.username }}">{{ user.username|slice:":1" }}</button>
-              <a class="primary-button" href="{% url 'logout' %}">{% trans 'Выйти' %}</a>
+              <span>
+                <form id="logout-form" method="post" action="{% url 'logout' %}" style="display: none">{% csrf_token %}</form>
+                <a class="primary-button" href="#" onclick="document.getElementById('logout-form').submit(); return false;">{% trans 'Выйти' %}</a>
+              </span>
               {% else %}
               <a class="primary-button" href="{% url 'login' %}">{% trans 'Войти' %}</a>
               {% endif %}
