@@ -3069,7 +3069,7 @@ def analyze_segment_with_llm_task(self, analyzed_segment_id: int, user_id: int):
 
             client = OpenAI(
                 base_url="http://80.209.242.40:8000/v1",
-                api_key="dummy-key"
+                api_key=settings.OPENAI_API_KEY
             )
             llm_model_used = "llama-3.3-70b-instruct"
 
