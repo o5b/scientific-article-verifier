@@ -52,6 +52,7 @@
   }
 
   .linked-articles-toggle {
+    width: 100%;
     /* display: inline-block;
     padding: 5px 10px;
     background-color: #f0f0f0;
@@ -147,11 +148,11 @@
 </style>
 {% endblock %} {% block content %} {% if articles_data %}
 <div class="container">
-  <!-- <h2>{% trans 'Список ваших статей' %}</h2> -->
+  <!-- <h2>{% trans 'List of your articles' %}</h2> -->
   <div id="article-list-container">
     {% for item_data in articles_data %}
     <div class="article-entry">
-      {# Информация об основной статье #}
+      {# Information about the primary article #}
       <div class="primary-article-info">
         <h3>
           <a href="{% url 'article_detail' item_data.primary_article.pk %}"> {{ item_data.primary_article.title|truncatewords:20 }} </a>
@@ -159,26 +160,26 @@
         <p><strong>DOI:</strong> {{ item_data.primary_article.doi|default:"N/A" }}</p>
         <p><strong>PMID:</strong> {{ item_data.primary_article.pubmed_id|default:"N/A" }}</p>
         {% comment %}
-        <p><strong>{% trans 'Статус OA (Unpaywall):' %}</strong> {{ item_data.primary_article.oa_status|default:"Неизвестно" }}</p>
+        <p><strong>{% trans 'OA Status (Unpaywall):' %}</strong> {{ item_data.primary_article.oa_status|default:"Unknown" }}</p>
         {% endcomment %} {% if item_data.primary_article.best_oa_pdf_url %}
-        <p><a href="{{ item_data.primary_article.best_oa_pdf_url }}" target="_blank" rel="noopener noreferrer">{% trans 'Ссылка на OA PDF' %}</a></p>
+        <p><a href="{{ item_data.primary_article.best_oa_pdf_url }}" target="_blank" rel="noopener noreferrer">{% trans 'Link to OA PDF' %}</a></p>
         {% elif item_data.primary_article.best_oa_url %}
-        <p><a href="{{ item_data.primary_article.best_oa_url }}" target="_blank" rel="noopener noreferrer">{% trans 'Ссылка на OA версию' %}</a></p>
+        <p><a href="{{ item_data.primary_article.best_oa_url }}" target="_blank" rel="noopener noreferrer">{% trans 'Link to OA version' %}</a></p>
         {% endif %}
-        <p><small>{% trans 'Добавлено/Обновлено:' %} {{ item_data.primary_article.updated_at|date:"d.m.Y H:i" }}</small></p>
+        <p><small>{% trans 'Added/Updated:' %} {{ item_data.primary_article.updated_at|date:"d.m.Y H:i" }}</small></p>
       </div>
 
       <div class="primary-article-action-buttons">
-        {# Блок для связанных статей #} {% if item_data.linked_articles %}
+        {# Section for linked articles #} {% if item_data.linked_articles %}
         <div class="linked-articles-section">
           <button type="button" class="linked-articles-toggle stroked-button" data-target="linked-articles-{{ item_data.primary_article.pk }}">
-            {% trans 'Cвязанные статьи' %} ({{ item_data.linked_articles|length }})
+            {% trans 'Linked Articles' %} ({{ item_data.linked_articles|length }})
           </button>
           <div id="linked-articles-{{ item_data.primary_article.pk }}" class="linked-articles-container">
             <div class="linked-articles-container-outer linked-articles-toggle" isNotChangableText data-target="linked-articles-{{ item_data.primary_article.pk }}">
               <div class="linked-articles-container-inner">
                 <div class="linked-articles-container-head">
-                  <h4>{% trans 'Связанные статьи:' %}</h4>
+                  <h4>{% trans 'Linked Articles:' %}</h4>
                   <button type="button" class="linked-articles-toggle dialog-toggle" isNotChangableText data-target="linked-articles-{{ item_data.primary_article.pk }}">
                     <svg width="24" height="24" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg" style="pointer-events: none">
                       <path d="M6.4 19L5 17.6L10.6 12L5 6.4L6.4 5L12 10.6L17.6 5L19 6.4L13.4 12L19 17.6L17.6 19L12 13.4L6.4 19Z" fill="black" />
@@ -201,7 +202,7 @@
           </div>
         </div>
         {% endif %}
-        <a class="primary-article-action-more primary-button" href="{% url 'article_detail' item_data.primary_article.pk %}">{% trans 'Подробнее' %}</a>
+        <a class="primary-article-action-more primary-button" href="{% url 'article_detail' item_data.primary_article.pk %}">{% trans 'Read more' %}</a>
       </div>
     </div>
     {% endfor %}
@@ -209,8 +210,9 @@
 </div>
 {% else %}
 <div class="container">
-  <p style="margin: auto; text-align: center">{% trans 'У вас пока нет добавленных статей. Вы можете' %} <a href="{% url 'submit_article' %}">{% trans 'добавить новую статью' %}</a>.</p>
+  <p style="margin: auto; text-align: center">{% trans 'You have no articles added yet. You can' %} <a href="{% url 'submit_article' %}">{% trans 'add a new article' %}</a>.</p>
 </div>
+
 {% endif %} {% endblock %} {% block extra_js %}
 
 <script>

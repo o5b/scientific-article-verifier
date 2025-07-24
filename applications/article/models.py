@@ -431,18 +431,31 @@ class ArticleContent(models.Model):
 class ReferenceLink(models.Model):
     """Модель для хранения ссылок (references) внутри статьи и их связи с другими статьями в БД."""
 
+    # class StatusChoices(models.TextChoices):
+    #     PENDING_DOI_INPUT = 'pending_doi_input', _('Ожидает ввода/поиска DOI')
+    #     DOI_LOOKUP_IN_PROGRESS = 'doi_lookup_in_progress', _('Идет поиск DOI для ссылки')
+    #     DOI_PROVIDED_NEEDS_LOOKUP = 'doi_provided_needs_lookup', _('DOI найден, ожидает загрузки статьи')
+    #     ARTICLE_FETCH_IN_PROGRESS = 'article_fetch_in_progress', _('Идет загрузка статьи по DOI')
+    #     ARTICLE_LINKED = 'article_linked', _('Статья найдена и связана')
+    #     ARTICLE_NOT_FOUND = 'article_not_found', _('Статья не найдена по DOI')
+    #     MANUAL_ENTRY = 'manual_entry', _('Данные введены вручную')
+    #     MANUAL_METADATA_ONLY = 'manual_metadata_only', _('Метаданные введены вручную (без связи)')
+    #     ERROR_DOI_LOOKUP = 'error_doi_lookup', _('Ошибка при поиске DOI')
+    #     ERROR_ARTICLE_FETCH = 'error_article_fetch', _('Ошибка при загрузке статьи')
+    #     ERROR_PROCESSING = 'error_processing', _('Ошибка при обработке')
+        
     class StatusChoices(models.TextChoices):
-        PENDING_DOI_INPUT = 'pending_doi_input', _('Ожидает ввода/поиска DOI')
-        DOI_LOOKUP_IN_PROGRESS = 'doi_lookup_in_progress', _('Идет поиск DOI для ссылки')
-        DOI_PROVIDED_NEEDS_LOOKUP = 'doi_provided_needs_lookup', _('DOI найден, ожидает загрузки статьи')
-        ARTICLE_FETCH_IN_PROGRESS = 'article_fetch_in_progress', _('Идет загрузка статьи по DOI')
-        ARTICLE_LINKED = 'article_linked', _('Статья найдена и связана')
-        ARTICLE_NOT_FOUND = 'article_not_found', _('Статья не найдена по DOI')
-        MANUAL_ENTRY = 'manual_entry', _('Данные введены вручную')
-        MANUAL_METADATA_ONLY = 'manual_metadata_only', _('Метаданные введены вручную (без связи)')
-        ERROR_DOI_LOOKUP = 'error_doi_lookup', _('Ошибка при поиске DOI')
-        ERROR_ARTICLE_FETCH = 'error_article_fetch', _('Ошибка при загрузке статьи')
-        ERROR_PROCESSING = 'error_processing', _('Ошибка при обработке')
+        PENDING_DOI_INPUT = 'pending_doi_input', _('Awaiting DOI input or lookup')
+        DOI_LOOKUP_IN_PROGRESS = 'doi_lookup_in_progress', _('Searching for DOI')
+        DOI_PROVIDED_NEEDS_LOOKUP = 'doi_provided_needs_lookup', _('DOI provided, awaiting article fetch')
+        ARTICLE_FETCH_IN_PROGRESS = 'article_fetch_in_progress', _('Fetching article by DOI')
+        ARTICLE_LINKED = 'article_linked', _('Article found and linked')
+        ARTICLE_NOT_FOUND = 'article_not_found', _('Article not found by DOI')
+        MANUAL_ENTRY = 'manual_entry', _('Manually entered data')
+        MANUAL_METADATA_ONLY = 'manual_metadata_only', _('Manually entered metadata (not linked)')
+        ERROR_DOI_LOOKUP = 'error_doi_lookup', _('Error during DOI lookup')
+        ERROR_ARTICLE_FETCH = 'error_article_fetch', _('Error fetching article')
+        ERROR_PROCESSING = 'error_processing', _('Processing error')
 
     source_article = models.ForeignKey(
         Article,

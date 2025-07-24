@@ -131,7 +131,7 @@
         width: var(--page-width, 80%);
         max-width: 100%;
         flex: 1;
-        margin: 20px auto 0;
+        margin: 20px auto 20px;
         padding: 0 20px;
       }
 
@@ -545,18 +545,18 @@
           <div class="header-row">
             <div class="header-left-side"></div>
             <div class="header-logo-wrap">
-              <a class="header-logo" href="/articles">{% trans 'Научные Статьи AI' %}</a>
+              <a class="header-logo" href="/articles">{% trans 'Scientific Articles AI' %}</a>
             </div>
             <div class="header-right-side">
               {% if user.is_authenticated %}
-              <!-- {% trans 'Привет,' %} -->
+              <!-- {% trans 'Hello,' %} -->
               <button class="profile-button" title="{{ user.username }}">{{ user.username|slice:":1" }}</button>
               <span>
                 <form id="logout-form" method="post" action="{% url 'logout' %}" style="display: none">{% csrf_token %}</form>
-                <a class="primary-button" href="#" onclick="document.getElementById('logout-form').submit(); return false;">{% trans 'Выйти' %}</a>
+                <a class="primary-button" href="#" onclick="document.getElementById('logout-form').submit(); return false;">{% trans 'Log out' %}</a>
               </span>
               {% else %}
-              <a class="primary-button" href="{% url 'login' %}">{% trans 'Войти' %}</a>
+              <a class="primary-button" href="{% url 'login' %}">{% trans 'Log in' %}</a>
               {% endif %}
             </div>
           </div>
@@ -567,8 +567,8 @@
     <div class="header-row-full-width sticky">
       <div class="header-row">
         <nav class="header-nav">
-          <a targetName="articles" href="{% url 'article_list' %}">{% trans 'Мои статьи' %}</a>
-          <a targetName="add_article" href="{% url 'submit_article' %}">{% trans 'Добавить статью' %}</a>
+          <a targetName="articles" href="{% url 'article_list' %}">{% trans 'My Articles' %}</a>
+          <a targetName="add_article" href="{% url 'submit_article' %}">{% trans 'Add Article' %}</a>
         </nav>
       </div>
     </div>
@@ -585,7 +585,6 @@
     <footer>
       <p style="text-align: center; color: #777; font-size: 0.8em">&copy; {% now "Y" %} Scientific Papers AI App</p>
     </footer>
-
     {% block extra_js %}{% endblock %}
 
     <script>
