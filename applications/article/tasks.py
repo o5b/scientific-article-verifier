@@ -3023,27 +3023,27 @@ def analyze_segment_with_llm_task(self, analyzed_segment_id: int, user_id: int):
     cited_references_text = "\n".join(cited_references_info) if cited_references_info else "Information on cited sources is not provided."
 
     # Формирование промпта
-    prompt = f"""Ты выступаешь в роли научного ассистента. Тебе дан текстовый сегмент из научной статьи и информация о цитируемых в нем (или релевантных для него) источниках.
-    Твоя задача:
-    1. Внимательно прочитать текстовый сегмент.
-    2. Изучить предоставленную информацию о цитируемых источниках.
-    3. Оценить, насколько утверждения, сделанные в текстовом сегменте, подтверждаются или соотносятся с информацией из этих источников.
-    4. Сформировать краткий текстовый анализ (2-5 предложений), описывающий твою оценку.
-    5. Дать числовую оценку уверенности в поддержке утверждений сегмента источниками по шкале от 1 (нет поддержки/противоречие) до 5 (полная и ясная поддержка).
+    prompt = f"""You are acting as a scientific assistant. You are given a text segment from a scientific article and information about sources cited in it (or relevant to it).
+    Your task:
+    1. Carefully read the text segment.
+    2. Study the provided information about cited sources.
+    3. Assess how well the claims made in the text segment are supported by or relate to the information from these sources.
+    4. Form a brief textual analysis (2-5 sentences) describing your assessment.
+    5. Give a numerical confidence score for how well the segment's claims are supported by the sources on a scale from 1 (no support/contradiction) to 5 (complete and clear support).
 
-    Текстовый сегмент для анализа:
-    ------- СЕГМЕНТ -------
+    Text segment for analysis:
+    ------- SEGMENT -------
     {segment.segment_text}
-    ------- КОНЕЦ СЕГМЕНТА -------
+    ------- END OF SEGMENT -------
 
-    Информация о цитируемых/релевантных источниках:
-    ------- ИНФОРМАЦИЯ ОБ ИСТОЧНИКАХ -------
+    Information about cited/relevant sources:
+    ------- SOURCE INFORMATION -------
     {cited_references_text}
-    ------- КОНЕЦ ИНФОРМАЦИИ ОБ ИСТОЧНИКАХ -------
+    ------- END OF SOURCE INFORMATION -------
 
-    Предоставь свой ответ строго в формате JSON со следующими ключами:
-    "analysis_notes": "Твой текстовый анализ здесь.",
-    "veracity_score": число от 1 до 5 (например, 3 или 4.5)."""
+    Provide your answer strictly in JSON format with the following keys:
+    "analysis_notes": "Your textual analysis here.",
+    "veracity_score": number from 1 to 5 (e.g., 3 or 4.5)."""
 
     print(f'segment.id: {segment.id}, PROMPT len: {len(prompt)}, PROMPT words count: {len(prompt.split())} \n')
     print(prompt)
@@ -3078,7 +3078,7 @@ def analyze_segment_with_llm_task(self, analyzed_segment_id: int, user_id: int):
                 messages=[
                     {
                         "role": "system",
-                        "content": "Ты - внимательный научный ассистент, который анализирует текст и его источники и всегда отвечает в формате JSON."
+                        "content": "You are an attentive research assistant who analyses the text and its sources and always responds in JSON format."
                     },
                     {
                         "role": "user",
