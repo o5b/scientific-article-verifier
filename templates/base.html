@@ -556,7 +556,8 @@
                 <a class="primary-button" href="#" onclick="document.getElementById('logout-form').submit(); return false;">{% trans 'Выйти' %}</a>
               </span>
               {% else %}
-              <a class="primary-button" href="{% url 'login' %}">{% trans 'Войти' %}</a>
+                <a class="primary-button" href="{% url 'login' %}">{% trans 'Войти' %}</a>
+                <a class="primary-button" href="{% url 'signup' %}">{% trans 'Регистрация' %}</a>
               {% endif %}
             </div>
           </div>

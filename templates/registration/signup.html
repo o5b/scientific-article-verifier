@@ -1,0 +1,70 @@
+{% extends "base.html" %}
+{% load static %}
+{% load i18n %}
+
+{% block title %}{% trans 'Регистрация' %}{% endblock %}
+
+{% block content %}
+    <style>
+        .login-form{
+            max-width: 600px;
+            width: 100%;
+            margin: auto;
+            padding: 20px;
+            border-radius: var(--border-radius);
+            border:1px solid var(--border-color);
+            display: flex;
+            flex-direction: column;
+        }
+
+        .login-form h2{
+            margin: 0;
+            margin-bottom: 20px;
+        }
+
+        .login-form form {
+            display: flex;
+            flex-direction: column;
+            gap: 10px;
+        }
+
+        .login-form form input {
+            width: 100%;
+            margin: 0;
+            margin-top: 5px;
+        }
+    </style>
+
+    <div class="container">
+        <div class="login-form">
+            <h2 style="text-align: center;">{% trans 'Регистрация' %}</h2>
+
+            <form method="post">
+                {% csrf_token %}
+                {{ form.non_field_errors }}
+                <p>{{ form.username.label_tag }} {{ form.username }}</p>
+
+                <p>{{ form.password.label_tag }} {{ form.password }}</p>
+
+                <p>{{ form.password_confirm.label_tag }} {{ form.password_confirm }}</p>
+
+                {% if form.errors %}
+                    <div style="color:red; margin: 5px 0; text-align: center;">
+                        <p>{% trans 'Ошибка Регистрация.' %}</p>
+
+                        {% for field, errors in form.errors.items %}
+                            {% for error in errors %}
+                                <p>{{ error }}</p>
+                                {% comment %} {{ field }}: {{ error }} {% endcomment %}
+                            {% endfor %}
+                        {% endfor %}
+
+                        <p>{% trans 'Пожалуйста, попробуйте еще раз.' %}</p>
+                    </div>
+                {% endif %}
+
+                <button type="submit">{% trans 'Зарегистрироваться' %}</button>
+            </form>
+        </div>
+    </div>
+{% endblock %}
