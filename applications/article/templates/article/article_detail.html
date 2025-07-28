@@ -422,7 +422,7 @@
                                 {% for section in segments_by_section %}
                                     <div class="segment-section-group show" id='{{ section.grouper|default:"(Without section)" }}'>
                                         <button class="segment-section-group-head" onclick="handleSegmentToggle({tab: `{{section.grouper}}`, parentClass: '.segment-section-group', listClass:'.analyzed-segment-list', root:'.analyzed-segments-wrapper'})">
-                                            <h4>Section: {{ section.grouper|default:"(Без секции)" }}</h4>
+                                            <h4>Section: {{ section.grouper|default:"(Without section)" }}</h4>
                                             <!-- <svg width="16" height="16" viewBox="0 0 16 16" fill="none" xmlns="http://www.w3.org/2000/svg">
                                                 <path d="M2.93154 10.8426L7.61654 6.23165C7.71876 6.13052 7.85675 6.07379 8.00054 6.07379C8.14433 6.07379 8.28232 6.13052 8.38454 6.23165L13.0695 10.8416C13.1724 10.9427 13.3108 10.9994 13.455 10.9994C13.5992 10.9994 13.7377 10.9427 13.8405 10.8416C13.8912 10.7923 13.9314 10.7333 13.9589 10.6681C13.9864 10.6029 14.0006 10.5329 14.0006 10.4621C14.0006 10.3914 13.9864 10.3214 13.9589 10.2562C13.9314 10.191 13.8912 10.132 13.8405 10.0826L9.15654 5.47265C8.84802 5.16972 8.43292 5 8.00054 5C7.56816 5 7.15306 5.16972 6.84454 5.47265L2.16054 10.0826C2.10974 10.132 2.06936 10.1911 2.04178 10.2564C2.01421 10.3217 2 10.3918 2 10.4626C2 10.5335 2.01421 10.6036 2.04178 10.6689C2.06936 10.7342 2.10974 10.7933 2.16054 10.8426C2.2634 10.9437 2.40183 11.0004 2.54604 11.0004C2.69025 11.0004 2.82869 10.9437 2.93154 10.8426Z" fill="black"/>
                                             </svg> -->
@@ -1902,7 +1902,7 @@ document.addEventListener('DOMContentLoaded', function() {
             })
             .catch(error => {
                 console.error(`Error saving section ${sectionKey}:`, error);
-                addNotificationToDetail({ payload: { status: 'FAILURE', message: `Сетевая ошибка: ${error.message}`, identifier: `ArticleID:${articleId}` }});
+                addNotificationToDetail({ payload: { status: 'FAILURE', message: `Network error: ${error.message}`, identifier: `ArticleID:${articleId}` }});
                 button.disabled = false;
                 button.textContent = 'Сохранить';
             });
