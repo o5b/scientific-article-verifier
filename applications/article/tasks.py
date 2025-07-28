@@ -80,7 +80,7 @@ def process_article_pipeline_task(
             pipeline_task_id,
             pipeline_display_name,
             'PIPELINE_START',
-            f'Запуск конвейера обработки для: {pipeline_display_name}',
+            f'Run a processing pipeline for: {pipeline_display_name}',
             progress_percent=0,
             source_api=PIPELINE_DISPATCHER_SOURCE_NAME,
             originating_reference_link_id=originating_reference_link_id,
@@ -96,7 +96,7 @@ def process_article_pipeline_task(
                     pipeline_task_id,
                     pipeline_display_name,
                     'PIPELINE_FAILURE',
-                    f'Пользователь ID {user_id} не найден.',
+                    f'User ID {user_id} not found.',
                     source_api=PIPELINE_DISPATCHER_SOURCE_NAME,
                     originating_reference_link_id=originating_reference_link_id,
                 )
@@ -108,7 +108,7 @@ def process_article_pipeline_task(
                 pipeline_task_id,
                 pipeline_display_name,
                 'PIPELINE_FAILURE',
-                'Пользователь не указан для конвейера.',
+                'The user is not specified for the conveyor.',
                 source_api=PIPELINE_DISPATCHER_SOURCE_NAME,
                 originating_reference_link_id=originating_reference_link_id,
             )
@@ -137,7 +137,7 @@ def process_article_pipeline_task(
                 pipeline_task_id,
                 pipeline_display_name,
                 'PIPELINE_FAILURE',
-                f'Неподдерживаемый тип идентификатора: {identifier_type}',
+                f'Unsupported identifier type: {identifier_type}',
                 source_api=PIPELINE_DISPATCHER_SOURCE_NAME,
                 originating_reference_link_id=originating_reference_link_id,
             )
@@ -147,7 +147,7 @@ def process_article_pipeline_task(
             with transaction.atomic():
                 creation_defaults = {
                     'user': article_owner,
-                    'title': f"Статья в обработке: {pipeline_display_name}",
+                    'title': f"Article in processing: {pipeline_display_name}",
                     'is_user_initiated': originating_reference_link_id is None # True если это прямой вызов, False если для ссылки
                 }
 
@@ -168,7 +168,7 @@ def process_article_pipeline_task(
                     pipeline_task_id,
                     pipeline_display_name,
                     'PIPELINE_PROGRESS',
-                    f'Предварительная запись для статьи ID {article.id} создана (user_initiated={article.is_user_initiated}).', source_api=PIPELINE_DISPATCHER_SOURCE_NAME,
+                    f'The pre-record for article ID {article.id} has been created (user_initiated={article.is_user_initiated}).', source_api=PIPELINE_DISPATCHER_SOURCE_NAME,
                     originating_reference_link_id=originating_reference_link_id,
                 )
             else:
@@ -177,7 +177,7 @@ def process_article_pipeline_task(
                     pipeline_task_id,
                     pipeline_display_name,
                     'PIPELINE_PROGRESS',
-                    f'Найдена существующая статья ID {article.id} (user_initiated={article.is_user_initiated}). Обновление...', source_api=PIPELINE_DISPATCHER_SOURCE_NAME,
+                    f'Found an existing article ID {article.id} (user_initiated={article.is_user_initiated}). Update...', source_api=PIPELINE_DISPATCHER_SOURCE_NAME,
                     originating_reference_link_id=originating_reference_link_id,
                 )
 
@@ -191,7 +191,7 @@ def process_article_pipeline_task(
                 pipeline_task_id,
                 pipeline_display_name,
                 'PIPELINE_FAILURE',
-                f'Ошибка при создании/получении статьи: {str(e)}',
+                f'Error when creating/receiving an article: {str(e)}',
                 source_api=PIPELINE_DISPATCHER_SOURCE_NAME,
                 originating_reference_link_id=originating_reference_link_id,
             )
@@ -204,7 +204,7 @@ def process_article_pipeline_task(
             pipeline_task_id,
             pipeline_display_name,
             'PIPELINE_PROGRESS',
-            'Запуск получения данных из источников...',
+            'Start getting data from sources...',
             progress_percent=5,
             source_api=PIPELINE_DISPATCHER_SOURCE_NAME,
             originating_reference_link_id=originating_reference_link_id,
@@ -281,7 +281,7 @@ def process_article_pipeline_task(
                 pipeline_task_id,
                 effective_doi_for_subtasks,
                 'PIPELINE_ERROR',
-                f'Не удалось запустить задачи: {e}',
+                f'Failed to start tasks: {e}',
                 source_api=PIPELINE_DISPATCHER_SOURCE_NAME,
                 originating_reference_link_id=originating_reference_link_id,
             )
@@ -294,7 +294,7 @@ def process_article_pipeline_task(
             pipeline_task_id,
             pipeline_display_name,
             'PIPELINE_FAILURE',
-            f'Ошибка: {str(e)}',
+            f'Error: {str(e)}',
             source_api=PIPELINE_DISPATCHER_SOURCE_NAME,
             originating_reference_link_id=originating_reference_link_id,
         )
@@ -306,14 +306,14 @@ def process_article_pipeline_task(
         pipeline_task_id,
         pipeline_display_name,
         'PIPELINE_COMPLETE',
-        'Конвейер обработки завершил постановку всех задач.',
+        'The processing pipeline has completed setting up all tasks.',
         progress_percent=100,
         source_api=PIPELINE_DISPATCHER_SOURCE_NAME,
         originating_reference_link_id=originating_reference_link_id,
     )
     return {
         'status': 'success',
-        'message': 'Конвейер задач запущен.',
+        'message': 'The task pipeline is up and running.',
         'pipeline_task_id': pipeline_task_id,
         'article_id': article_id_for_subtasks,
     }
@@ -339,7 +339,7 @@ def process_data_task(
                 task_id,
                 query_display_name,
                 'FAILURE',
-                'Данные для обработки отсутствуют...',
+                'No data to process...',
                 # source_api=current_api_name,
                 originating_reference_link_id=originating_reference_link_id,
             )
@@ -354,7 +354,7 @@ def process_data_task(
                     task_id,
                     query_display_name,
                     'FAILURE',
-                    f'Пользователь ID {user_id} не найден.',
+                    f'User ID {user_id} not found.',
                     # source_api=PIPELINE_DISPATCHER_SOURCE_NAME,
                     originating_reference_link_id=originating_reference_link_id,
                 )
@@ -369,7 +369,7 @@ def process_data_task(
                     task_id,
                     query_display_name,
                     'FAILURE',
-                    f'Статья ID {article_id} (для обновления) не найдена/не принадлежит пользователю.',
+                    f'Article ID {article_id} (to update) not found/not owned by user.',
                     # source_api=current_api_name,
                     originating_reference_link_id=originating_reference_link_id,
                 )
@@ -381,7 +381,7 @@ def process_data_task(
                 task_id,
                 query_display_name,
                 'FAILURE',
-                f'Статья ID {article_id} (для обновления) не найдена.',
+                f'Article ID {article_id} (to update) not found.',
                 # source_api=current_api_name,
                 originating_reference_link_id=originating_reference_link_id,
             )
@@ -581,7 +581,7 @@ def process_data_task(
                     task_id,
                     query_display_name,
                     'PROGRESS',
-                    f'Извлечение ссылок из полного текста {current_api_name}..',
+                    f'Extract links from the full text of {current_api_name}...',
                     progress_percent=85,
                     source_api=current_api_name
                 )
@@ -593,7 +593,7 @@ def process_data_task(
                         task_id,
                         query_display_name,
                         'INFO',
-                        f'Найдено {len(parsed_references)} ссылок в полном тексте. Обработка...',
+                        f'Found {len(parsed_references)} references in full text. Processing...',
                         source_api=current_api_name
                     )
 
@@ -681,7 +681,7 @@ def process_data_task(
                                     task_id,
                                     query_display_name,
                                     'INFO',
-                                    f'{current_api_name} JATS: Недостаточно данных для поиска DOI для ссылки: {ref_obj.id}.',
+                                    f'{current_api_name} JATS: Insufficient data to find DOI for reference: {ref_obj.id}.',
                                     source_api=current_api_name,
                                     # originating_reference_link_id=reference_link_id
                                 )
@@ -709,7 +709,7 @@ def process_data_task(
                                         task_id,
                                         query_display_name,
                                         'PROGRESS',
-                                        f'{current_api_name} Запрос к CrossRef для поиска DOI: "{bibliographic_query[:50]}..."',
+                                        f'{current_api_name} CrossRef query for DOI search:"{bibliographic_query[:50]}..."',
                                         # progress_percent=30,
                                         source_api=current_api_name,
                                         # originating_reference_link_id=reference_link_id
@@ -755,7 +755,7 @@ def process_data_task(
                                             task_id,
                                             query_display_name,
                                             'SUCCESS',
-                                            f'Найден DOI: {found_doi} (score: {score}) для ссылки.',
+                                            f'Found DOI: {found_doi} (score: {score}) for reference.',
                                             # progress_percent=100,
                                             source_api=current_api_name,
                                             # originating_reference_link_id=reference_link_id
@@ -768,7 +768,7 @@ def process_data_task(
                                             task_id,
                                             query_display_name,
                                             'FAILURE',
-                                            'DOI не найден в ответе CrossRef.',
+                                            'DOI not found in CrossRef response.',
                                             # progress_percent=100,
                                             source_api=current_api_name,
                                             # originating_reference_link_id=reference_link_id
@@ -781,7 +781,7 @@ def process_data_task(
                                         task_id,
                                         query_display_name,
                                         'FAILURE',
-                                        'DOI не найден (пустой ответ от CrossRef).',
+                                        'DOI not found (empty response from CrossRef).',
                                         # progress_percent=100,
                                         source_api=current_api_name,
                                         # originating_reference_link_id=reference_link_id
@@ -795,7 +795,7 @@ def process_data_task(
                                 task_id,
                                 query_display_name,
                                 'INFO',
-                                f'{current_api_name} JATS: Найдена ссылка {ref_obj.id} с DOI: {ref_doi_jats}. Запуск конвейера.',
+                                f'{current_api_name} JATS: Found reference {ref_obj.id} with DOI: {ref_doi_jats}. Starting the pipeline.',
                                 source_api=current_api_name
                             )
                             process_article_pipeline_task.delay(
@@ -811,7 +811,7 @@ def process_data_task(
                             task_id,
                             query_display_name,
                             'PROGRESS',
-                            f'{current_api_name} JATS: Обработано {processed_jats_ref_count} ссылок.',
+                            f'{current_api_name} JATS: Processed {processed_jats_ref_count} links.',
                             progress_percent=90,
                             source_api=current_api_name
                         )
@@ -822,7 +822,7 @@ def process_data_task(
                 task_id,
                 query_display_name,
                 'PROGRESS',
-                f'Найден PMCID: {article.pmc_id}. Начало получния PDF файла...',
+                f'PMCID found: {article.pmc_id}. Home of the resulting PDF file...',
                 progress_percent=55,
                 source_api=current_api_name
             )
@@ -840,7 +840,7 @@ def process_data_task(
                         task_id,
                         query_display_name,
                         'INFO',
-                        'PDF файл успешно получен из PMC.',
+                        'PDF file successfully received from PMC.',
                         source_api=current_api_name
                     )
                 else:
@@ -849,7 +849,7 @@ def process_data_task(
                         task_id,
                         query_display_name,
                         'WARNING',
-                        f'Не удалось получить PDF из PMC для {article.pmc_id}.',
+                        f'Failed to retrieve PDF from PMC for {article.pmc_id}.',
                         source_api=current_api_name
                     )
             except Exception as exc:
@@ -858,7 +858,7 @@ def process_data_task(
                     task_id,
                     query_display_name,
                     'WARNING',
-                    f'Ошибка при запросе PDF файла из PMC: {exc}',
+                    f'Error when requesting PDF file from PMC: {exc}',
                     source_api=current_api_name
                 )
 
@@ -868,7 +868,7 @@ def process_data_task(
                 task_id,
                 query_display_name,
                 'PROGRESS',
-                f'DOI: {article.doi}. Начало получния PDF файла из Sci-Hub.box...',
+                f'DOI: {article.doi}. Start of getting PDF file from Sci-Hub.box...',
                 # progress_percent=55,
                 source_api=current_api_name
             )
@@ -884,7 +884,7 @@ def process_data_task(
                         task_id,
                         query_display_name,
                         'INFO',
-                        'PDF файл успешно получен из Sci-Hub.Box',
+                        'PDF file successfully retrieved from Sci-Hub.Box',
                         source_api=current_api_name
                     )
                 else:
@@ -893,7 +893,7 @@ def process_data_task(
                         task_id,
                         query_display_name,
                         'WARNING',
-                        f'Не удалось получить PDF из Sci-Hub.Box для {article.doi}.',
+                        f'Failed to retrieve PDF from Sci-Hub.Box for {article.doi}.',
                         source_api=current_api_name
                     )
             except Exception as exc:
@@ -902,7 +902,7 @@ def process_data_task(
                     task_id,
                     query_display_name,
                     'WARNING',
-                    f'Ошибка при запросе PDF файла из Sci-Hub.Box: {exc}',
+                    f'Error when requesting a PDF file from Sci-Hub.Box: {exc}',
                     source_api=current_api_name
                 )
 
@@ -913,7 +913,7 @@ def process_data_task(
                         task_id,
                         query_display_name,
                         'PROGRESS',
-                        f'RXVI: Начало получения PDF файла для DOI: {article.doi}...',
+                        f'RXVI: Beginning to retrieve PDF file for DOI: {article.doi}...',
                         source_api=current_api_name
                     )
                     pdf_url, pdf_to_save = download_pdf_from_rxiv(article.doi, article_data['rxiv_version'])
@@ -924,7 +924,7 @@ def process_data_task(
                             task_id,
                             query_display_name,
                             'INFO',
-                            f'RXVI: PDF файл для: {article.doi} успешно получен из: {pdf_url}.',
+                            f'RXVI: PDF file for: {article.doi} was successfully retrieved from: {pdf_url}.',
                             source_api=current_api_name
                         )
                     else:
@@ -933,7 +933,7 @@ def process_data_task(
                             task_id,
                             query_display_name,
                             'WARNING',
-                            f'RXVI: Не удалось получить PDF файл для: {article.doi} из {pdf_url}.',
+                            f'RXVI: Failed to retrieve PDF file for: {article.doi} from {pdf_url}.',
                             source_api=current_api_name
                         )
 
@@ -948,7 +948,7 @@ def process_data_task(
                         task_id,
                         query_display_name,
                         'INFO',
-                        f'MarkItDown: Начало конвертации PDF файла: {pdf_file_path} в текст...',
+                        f'MarkItDown: Start converting PDF file: {pdf_file_path} to text...',
                         source_api=current_api_name
                     )
                     # Конвертируем PDF в текст
@@ -968,7 +968,7 @@ def process_data_task(
                                 task_id,
                                 query_display_name,
                                 'SUCCESS',
-                                f'MarkItDown для PDF файла: {pdf_file_path} длинной: {len(extracted_markitdown_text)}.',
+                                f'MarkItDown for PDF file: {pdf_file_path} long: {len(extracted_markitdown_text)}.',
                                 source_api=current_api_name
                             )
                             article.pdf_text = extracted_markitdown_text
@@ -980,7 +980,7 @@ def process_data_task(
                                 task_id,
                                 query_display_name,
                                 'INFO',
-                                f'MarkItDown для PDF файла: {pdf_file_path} не вернул текст. Ответ: {data}',
+                                f'MarkItDown for PDF file: {pdf_file_path} did not return text. The answer is {data}',
                                 source_api=current_api_name
                             )
             except requests.exceptions.RequestException as exc:
@@ -989,7 +989,7 @@ def process_data_task(
                     task_id,
                     query_display_name,
                     'RETRYING',
-                    f'MarkItDown для PDF файла: {pdf_file_path}. Ошибка Сети/API: {str(exc)}. Повтор...',
+                    f'MarkItDown for PDF file: {pdf_file_path}. Network/API error: {str(exc)}. Repeat...',
                     source_api=current_api_name,
                     originating_reference_link_id=originating_reference_link_id
                 )
@@ -999,7 +999,7 @@ def process_data_task(
                     task_id,
                     query_display_name,
                     'FAILURE',
-                    f'MarkItDown для PDF файла: {pdf_file_path}. Ошибка: {str(err)}.',
+                    f'MarkItDown for PDF file: {pdf_file_path}. Error: {str(err)}.',
                     source_api=current_api_name,
                     originating_reference_link_id=originating_reference_link_id
                 )
@@ -1011,7 +1011,7 @@ def process_data_task(
             task_id,
             query_display_name,
             'PROGRESS',
-            f'Статья id {article.id} сохранена.',
+            f'Article id {article.id} has been saved.',
             # progress_percent=50,
             # source_api=current_api_name,
             originating_reference_link_id=originating_reference_link_id
@@ -1051,7 +1051,7 @@ def process_data_task(
                             task_id,
                             query_display_name,
                             'ERROR',
-                            f'Ошибка создания/обновления Author: {str(e_author)}',
+                            f'Error creating/updating Author: {str(e_author)}',
                             source_api=current_api_name,
                             originating_reference_link_id=originating_reference_link_id
                         )
@@ -1068,7 +1068,7 @@ def process_data_task(
                     task_id,
                     query_display_name,
                     'INFO',
-                    f'Ссылка ID {ref_link.id} связана со статьей.',
+                    f'The link ID {ref_link.id} is associated with the article.',
                     source_api=current_api_name,
                     originating_reference_link_id=originating_reference_link_id
                 )
@@ -1080,7 +1080,7 @@ def process_data_task(
                     task_id,
                     query_display_name,
                     'ERROR',
-                    f'Ошибка обновления ref_link: {str(e_ref)}',
+                    f'Ref_link update error: {str(e_ref)}',
                     source_api=current_api_name,
                     originating_reference_link_id=originating_reference_link_id
                 )
@@ -1093,7 +1093,7 @@ def process_data_task(
                 task_id,
                 query_display_name,
                 'INFO',
-                'Поставлена задача на автоматическое связывание текста и ссылок.',
+                'The task is set to automatically link text and links.',
                 source_api=current_api_name
             )
             process_full_text_and_create_segments_task.delay(
@@ -1104,7 +1104,7 @@ def process_data_task(
         # финальное уведомление
         final_message = f'{query_display_name}: Данные Статьи {article.id} "{article.title[:30]}...".'
         if full_text_xml_pmc or full_text_xml_rxvi or full_text_xml_europepmc:
-            final_message += " Получен полный текст, запущена сегментация."
+            final_message += " Full text received, segmentation started."
         send_user_notification(
             user_id,
             task_id,
@@ -1181,7 +1181,7 @@ def fetch_data_from_crossref_task(
             task_id,
             query_display_name,
             'PENDING',
-            f'Обработка {current_api_name} для {query_display_name}' + (' (включая ссылки)' if process_references else ''),
+            f'Process {current_api_name} for {query_display_name}' + (' (including references)' if process_references else ''),
             progress_percent=0,
             source_api=current_api_name,
             originating_reference_link_id=originating_reference_link_id
@@ -1193,11 +1193,11 @@ def fetch_data_from_crossref_task(
                 task_id,
                 query_display_name,
                 'FAILURE',
-                'DOI не указан.',
+                'DOI not specified.',
                 source_api=current_api_name,
                 originating_reference_link_id=originating_reference_link_id
             )
-            return {'status': 'error', 'message': 'DOI не указан.', 'doi': query_display_name}
+            return {'status': 'error', 'message': 'DOI not specified.', 'doi': query_display_name}
 
         headers = {'User-Agent': USER_AGENT_LIST[0]}
         # DOI в URL CrossRef обычно не чувствителен к регистру, но приведем к нижнему для единообразия
@@ -1226,7 +1226,7 @@ def fetch_data_from_crossref_task(
                 task_id,
                 query_display_name,
                 'RETRYING',
-                f'Ошибка сети/API {current_api_name}: {str(exc)}. Повтор...',
+                f'Network/API error {current_api_name}: {str(exc)}. Repeat...',
                 source_api=current_api_name,
                 originating_reference_link_id=originating_reference_link_id
             )
@@ -1237,7 +1237,7 @@ def fetch_data_from_crossref_task(
                 task_id,
                 query_display_name,
                 'FAILURE',
-                f'Ошибка декодирования JSON от {current_api_name}: {str(json_exc)}',
+                f'JSON decoding error from {current_api_name}: {str(json_exc)}',
                 source_api=current_api_name,
                 originating_reference_link_id=originating_reference_link_id
             )
@@ -1248,7 +1248,7 @@ def fetch_data_from_crossref_task(
                 task_id,
                 query_display_name,
                 'FAILURE',
-                f'Ошибка от {current_api_name}: {str(err)}',
+                f'Error from {current_api_name}: {str(err)}',
                 source_api=current_api_name,
                 originating_reference_link_id=originating_reference_link_id
             )
@@ -1260,7 +1260,7 @@ def fetch_data_from_crossref_task(
                 task_id,
                 query_display_name,
                 'NOT_FOUND',
-                f'{current_api_name} API: ответ не содержит "message" или статья не найдена.',
+                f'{current_api_name} API: response does not contain "message" or article not found.',
                 source_api=current_api_name,
                 originating_reference_link_id=originating_reference_link_id
             )
@@ -1274,7 +1274,7 @@ def fetch_data_from_crossref_task(
             task_id,
             query_display_name,
             'PROGRESS',
-            f'Данные {current_api_name} получены, обработка...',
+            f'Data {current_api_name} received, processing...',
             progress_percent=25,
             source_api=current_api_name,
             originating_reference_link_id=originating_reference_link_id
@@ -1346,7 +1346,7 @@ def fetch_data_from_crossref_task(
         }
 
     except Exception as e:
-        error_message_for_user = f'Внутренняя ошибка {current_api_name}: {type(e).__name__} - {str(e)}'
+        error_message_for_user = f'Internal error {current_api_name}: {type(e).__name__} - {str(e)}'
         self.update_state(
             state='FAILURE',
             meta={
@@ -1415,7 +1415,7 @@ def fetch_data_from_pubmed_task(
             task_id,
             query_display_name,
             'PENDING',
-            f'Начинаем обработку {current_api_name}...',
+            f'Start processing {current_api_name}...',
             progress_percent=0,
             source_api=current_api_name,
             originating_reference_link_id=originating_reference_link_id,
@@ -1427,11 +1427,11 @@ def fetch_data_from_pubmed_task(
                 task_id,
                 query_display_name,
                 'FAILURE',
-                'Идентификатор не указан.',
+                'Identifier not specified.',
                 source_api=current_api_name,
                 originating_reference_link_id=originating_reference_link_id,
             )
-            return {'status': 'error', 'message': 'Идентификатор не указан.'}
+            return {'status': 'error', 'message': 'Identifier not specified.'}
 
         article_owner = None
         if user_id:
@@ -1443,7 +1443,7 @@ def fetch_data_from_pubmed_task(
                     task_id,
                     query_display_name,
                     'FAILURE',
-                    f'Пользователь ID {user_id} не найден.',
+                    f'User ID {user_id} not found.',
                     source_api=current_api_name,
                     originating_reference_link_id=originating_reference_link_id
                 )
@@ -1468,7 +1468,7 @@ def fetch_data_from_pubmed_task(
                     task_id,
                     query_display_name,
                     'PROGRESS',
-                    f'Поиск PMID по DOI {identifier_value} через ESearch...',
+                    f'Search for PMID by DOI {identifier_value} via ESearch....',
                     progress_percent=10,
                     source_api=current_api_name,
                     originating_reference_link_id=originating_reference_link_id
@@ -1485,13 +1485,13 @@ def fetch_data_from_pubmed_task(
                         if 'idlist' in pubmed_esearch_data['esearchresult'] and pubmed_esearch_data['esearchresult']['idlist']:
                             if len(pubmed_esearch_data['esearchresult']['idlist']) > 0:
                                 pmid_to_fetch = pubmed_esearch_data['esearchresult']['idlist'][0]
-                                query_display_name = f"PMID:{pmid_to_fetch} (найден по DOI:{identifier_value})"
+                                query_display_name = f"PMID:{pmid_to_fetch} (found by DOI:{identifier_value})"
                                 send_user_notification(
                                     user_id,
                                     task_id,
                                     query_display_name,
                                     'PROGRESS',
-                                    f'PMID {pmid_to_fetch} найден. Запрос EFetch...',
+                                    f'PMID {pmid_to_fetch} found. Query EFetch...',
                                     # progress_percent=20,
                                     source_api=current_api_name,
                                     originating_reference_link_id=originating_reference_link_id
@@ -1502,7 +1502,7 @@ def fetch_data_from_pubmed_task(
                         task_id,
                         query_display_name,
                         'NOT_FOUND',
-                        'PMID не найден для указанного DOI.',
+                        'PMID not found for the specified DOI.',
                         source_api=current_api_name,
                         originating_reference_link_id=originating_reference_link_id
                     )
@@ -1513,7 +1513,7 @@ def fetch_data_from_pubmed_task(
                     task_id,
                     query_display_name,
                     'RETRYING',
-                    f'(PMID) Ошибка ESearch {current_api_name}: {str(exc)}. Повтор...',
+                    f'(PMID) ESearch error {current_api_name}: {str(exc)}. Repeat...',
                     source_api=current_api_name,
                     originating_reference_link_id=originating_reference_link_id
                 )
@@ -1524,7 +1524,7 @@ def fetch_data_from_pubmed_task(
                     task_id,
                     query_display_name,
                     'FAILURE',
-                    f'(PMID) Ошибка декодирования JSON от ESearch {current_api_name}: {str(json_exc)}.',
+                    f'(PMID) Error decoding JSON from ESearch {current_api_name}: {str(json_exc)}.',
                     source_api=current_api_name,
                     originating_reference_link_id=originating_reference_link_id
                 )
@@ -1535,7 +1535,7 @@ def fetch_data_from_pubmed_task(
                     task_id,
                     query_display_name,
                     'FAILURE',
-                    f'(PMID) Ошибка от ESearch {current_api_name}: {e}.',
+                    f'(PMID) Error from ESearch {current_api_name}: {e}.',
                     source_api=current_api_name,
                     originating_reference_link_id=originating_reference_link_id
                 )
@@ -1548,7 +1548,7 @@ def fetch_data_from_pubmed_task(
                     task_id,
                     query_display_name,
                     'PROGRESS',
-                    f'Поиск PMCID для DOI {identifier_value} через ESearch...',
+                    f'Search PMCID for DOI {identifier_value} via ESearch...',
                     progress_percent=15,
                     source_api=current_api_name,
                     originating_reference_link_id=originating_reference_link_id
@@ -1565,13 +1565,13 @@ def fetch_data_from_pubmed_task(
                         if 'idlist' in pmc_esearch_data['esearchresult'] and pmc_esearch_data['esearchresult']['idlist']:
                             if len(pmc_esearch_data['esearchresult']['idlist']) > 0:
                                 pmcid_to_fetch = pmc_esearch_data['esearchresult']['idlist'][0]
-                                query_display_name = f"PMCID:{pmcid_to_fetch} (найден по DOI:{identifier_value})"
+                                query_display_name = f"PMCID:{pmcid_to_fetch} (found by DOI:{identifier_value})"
                                 send_user_notification(
                                     user_id,
                                     task_id,
                                     query_display_name,
                                     'PROGRESS',
-                                    f'PMCID {pmcid_to_fetch} найден. Запрос EFetch...',
+                                    f'PMCID {pmcid_to_fetch} found. Query EFetch...',
                                     # progress_percent=20,
                                     source_api=current_api_name,
                                     originating_reference_link_id=originating_reference_link_id
@@ -1582,7 +1582,7 @@ def fetch_data_from_pubmed_task(
                         task_id,
                         query_display_name,
                         'NOT_FOUND',
-                        'PMCID не найден для указанного DOI.',
+                        'PMCID not found for the specified DOI.',
                         source_api=current_api_name,
                         originating_reference_link_id=originating_reference_link_id
                     )
@@ -1592,7 +1592,7 @@ def fetch_data_from_pubmed_task(
                     task_id,
                     query_display_name,
                     'RETRYING',
-                    f'(PMCID) Ошибка ESearch {current_api_name}: {str(exc)}. Повтор...',
+                    f'(PMCID) ESearch error {current_api_name}: {str(exc)}. Repeat..',
                     source_api=current_api_name,
                     originating_reference_link_id=originating_reference_link_id
                 )
@@ -1603,7 +1603,7 @@ def fetch_data_from_pubmed_task(
                     task_id,
                     query_display_name,
                     'FAILURE',
-                    f'(PMCID) Ошибка декодирования JSON от ESearch {current_api_name}: {str(json_exc)}.',
+                    f'(PMCID) ESearch JSON decoding error {current_api_name}: {str(json_exc)}.',
                     source_api=current_api_name,
                     originating_reference_link_id=originating_reference_link_id
                 )
@@ -1614,7 +1614,7 @@ def fetch_data_from_pubmed_task(
                     task_id,
                     query_display_name,
                     'FAILURE',
-                    f'(PMCID) Ошибка от ESearch {current_api_name}: {e}.',
+                    f'(PMCID) Error from ESearch {current_api_name}: {e}.',
                     source_api=current_api_name,
                     originating_reference_link_id=originating_reference_link_id
                 )
@@ -1638,13 +1638,13 @@ def fetch_data_from_pubmed_task(
                             if 'idlist' in pmc_esearch_from_pmid_data['esearchresult'] and pmc_esearch_from_pmid_data['esearchresult']['idlist']:
                                 if len(pmc_esearch_from_pmid_data['esearchresult']['idlist']) > 0:
                                     pmcid_to_fetch = pmc_esearch_from_pmid_data['esearchresult']['idlist'][0]
-                                    query_display_name = f"PMCID:{pmcid_to_fetch} (найден по DOI:{identifier_value})"
+                                    query_display_name = f"PMCID:{pmcid_to_fetch} (found at DOI:{identifier_value})"
                                     send_user_notification(
                                         user_id,
                                         task_id,
                                         query_display_name,
                                         'PROGRESS',
-                                        f'PMCID {pmcid_to_fetch} найден. Запрос EFetch...',
+                                        f'PMCID {pmcid_to_fetch} found. Query EFetch...',
                                         progress_percent=20,
                                         source_api=current_api_name,
                                         originating_reference_link_id=originating_reference_link_id
@@ -1655,7 +1655,7 @@ def fetch_data_from_pubmed_task(
                         task_id,
                         query_display_name,
                         'RETRYING',
-                        f'Ошибка ESearch {current_api_name}: {str(exc)}. Повтор...',
+                        f'ESearch error {current_api_name}: {str(exc)}. Повтор...',
                         source_api=current_api_name,
                         originating_reference_link_id=originating_reference_link_id
                     )
@@ -1666,7 +1666,7 @@ def fetch_data_from_pubmed_task(
                         task_id,
                         query_display_name,
                         'FAILURE',
-                        f'Ошибка декодирования JSON от ESearch {current_api_name}: {str(json_exc)}.',
+                        f'Error decoding JSON from ESearch {current_api_name}: {str(json_exc)}.',
                         source_api=current_api_name,
                         originating_reference_link_id=originating_reference_link_id
                     )
@@ -1677,7 +1677,7 @@ def fetch_data_from_pubmed_task(
                         task_id,
                         query_display_name,
                         'FAILURE',
-                        f'(PMCID) Ошибка от ESearch {current_api_name}: {e}.',
+                        f'(PMCID) Error from ESearch {current_api_name}: {e}.',
                         source_api=current_api_name,
                         originating_reference_link_id=originating_reference_link_id
                     )
@@ -1688,7 +1688,7 @@ def fetch_data_from_pubmed_task(
                 task_id,
                 query_display_name,
                 'FAILURE',
-                f'Неподдерживаемый тип идентификатора для {current_api_name}: {identifier_type}.',
+                f'Unsupported identifier type for {current_api_name}: {identifier_type}.',
                 source_api=current_api_name,
                 originating_reference_link_id=originating_reference_link_id
             )
@@ -1701,7 +1701,7 @@ def fetch_data_from_pubmed_task(
                 task_id,
                 query_display_name,
                 'NOT_FOUND',
-                'PMID не найден для указанного DOI.',
+                'PMID not found for the specified DOI.',
                 source_api=current_api_name,
                 originating_reference_link_id=originating_reference_link_id
             )
@@ -1728,7 +1728,7 @@ def fetch_data_from_pubmed_task(
                 task_id,
                 query_display_name,
                 'PROGRESS',
-                'Запрос метаданных из PubMed...',
+                'Querying metadata from PubMed...',
                 progress_percent=25,
                 source_api=current_api_name,
                 originating_reference_link_id=originating_reference_link_id
@@ -1744,7 +1744,7 @@ def fetch_data_from_pubmed_task(
                 task_id,
                 query_display_name,
                 'RETRYING',
-                f'Ошибка EFetch (db=pubmed): {exc}. Повтор...',
+                f'Fetch error (db=pubmed): {exc}. Repeat....',
                 source_api=current_api_name,
                 originating_reference_link_id=originating_reference_link_id
             )
@@ -1759,7 +1759,7 @@ def fetch_data_from_pubmed_task(
             root = ET.fromstring(xml_content_pubmed)
             pubmed_article_node = root.find('.//PubmedArticle')
             if pubmed_article_node is None:
-                raise ValueError("Структура PubmedArticle не найдена в XML.")
+                raise ValueError("Structure PubmedArticle not found in XML.")
 
             article_node = pubmed_article_node.find('.//Article')
             if article_node is None:
@@ -1768,12 +1768,12 @@ def fetch_data_from_pubmed_task(
                     task_id,
                     query_display_name,
                     'NOT_FOUND',
-                    'Тег Article не найден в PubmedArticle.',
+                    'Article tag not found in PubmedArticle.',
                     source_api=current_api_name,
                     originating_reference_link_id=originating_reference_link_id
                 )
                 # return {'status': 'not_found', 'message': 'Article tag not found in PubmedArticle.'}
-                raise ValueError("Тег Article не найден в PubmedArticle.")
+                raise ValueError("Article tag not found in PubmedArticle.")
 
             title_el = article_node.find('.//ArticleTitle')
             api_title = title_el.text.strip() if title_el is not None and title_el.text else None
@@ -1832,7 +1832,7 @@ def fetch_data_from_pubmed_task(
                 task_id,
                 query_display_name,
                 'FAILURE',
-                f'Ошибка парсинга XML PubMed: {e_xml}',
+                f'PubMed XML parsing error: {e_xml}',
                 source_api=current_api_name,
                 originating_reference_link_id=originating_reference_link_id
             )
@@ -1853,7 +1853,7 @@ def fetch_data_from_pubmed_task(
                 task_id,
                 query_display_name,
                 'PROGRESS',
-                f'Найден PMCID: {api_pmcid}. Запрос полного текста...',
+                f'PMCID found: {api_pmcid}. Full text request...',
                 progress_percent=50,
                 source_api=current_api_name
             )
@@ -1870,7 +1870,7 @@ def fetch_data_from_pubmed_task(
                         task_id,
                         query_display_name,
                         'INFO',
-                        'Полный текст JATS XML успешно получен из PMC.',
+                        'The full text of the JATS XML was successfully retrieved from PMC.',
                         source_api=current_api_name
                     )
                 else:
@@ -1879,11 +1879,11 @@ def fetch_data_from_pubmed_task(
                         task_id,
                         query_display_name,
                         'WARNING',
-                        f'Не удалось получить полный текст из PMC для {api_pmcid} (статус: {pmc_response.status_code}).',
+                        f'Failed to retrieve full text from PMC for {api_pmcid} (status: {pmc_response.status_code}).',
                         source_api=current_api_name
                     )
             except Exception as exc:
-                send_user_notification(user_id, task_id, query_display_name, 'WARNING', f'Ошибка при запросе полного текста из PMC: {exc}', source_api=current_api_name)
+                send_user_notification(user_id, task_id, query_display_name, 'WARNING', f'Error when requesting full text from PMC: {exc}', source_api=current_api_name)
 
             pdf_file_name = f"article_{api_pmcid}_{timezone.now().strftime('%Y%m%d%H%M%S')}.pdf"
             pmc_pdf_url = f'https://pmc.ncbi.nlm.nih.gov/articles/{api_pmcid}/pdf/'
@@ -1986,7 +1986,7 @@ def fetch_data_from_europepmc_task(
             task_id,
             query_display_name,
             'PENDING',
-            f'Начинаем обработку {current_api_name}...',
+            f'Start processing {current_api_name}...',
             progress_percent=0,
             source_api=current_api_name,
             originating_reference_link_id=originating_reference_link_id,
@@ -1998,11 +1998,11 @@ def fetch_data_from_europepmc_task(
                 task_id,
                 query_display_name,
                 'FAILURE',
-                'Идентификатор не указан.',
+                'Identifier not specified.',
                 source_api=current_api_name,
                 originating_reference_link_id=originating_reference_link_id,
             )
-            return {'status': 'error', 'message': 'Идентификатор не указан.', 'identifier': query_display_name}
+            return {'status': 'error', 'message': 'Identifier not specified.', 'identifier': query_display_name}
 
         article_owner = None
         if user_id:
@@ -2014,7 +2014,7 @@ def fetch_data_from_europepmc_task(
                     task_id,
                     query_display_name,
                     'FAILURE',
-                    f'Пользователь ID {user_id} не найден.',
+                    f'User ID {user_id} not found.',
                     source_api=current_api_name,
                     originating_reference_link_id=originating_reference_link_id,
                 )
@@ -2031,7 +2031,7 @@ def fetch_data_from_europepmc_task(
                 task_id,
                 query_display_name,
                 'PROGRESS',
-                f'Запрос к {api_search_url}',
+                f'Request for {api_search_url}',
                 progress_percent=20,
                 source_api=current_api_name,
                 originating_reference_link_id=originating_reference_link_id,
@@ -2046,7 +2046,7 @@ def fetch_data_from_europepmc_task(
                     task_id,
                     query_display_name,
                     'NOT_FOUND',
-                    f'EUROPEPMC не удалось получить данные для {query_string}.',
+                    f'EUROPEPMC was unable to retrieve data for {query_string}.',
                     source_api=current_api_name,
                     originating_reference_link_id=originating_reference_link_id,
                 )
@@ -2067,7 +2067,7 @@ def fetch_data_from_europepmc_task(
                 task_id,
                 query_display_name,
                 'FAILURE',
-                f'Ошибка декодирования JSON от {current_api_name}: {str(json_exc)}',
+                f'JSON decoding error from {current_api_name}: {str(json_exc)}',
                 source_api=current_api_name,
                 originating_reference_link_id=originating_reference_link_id,
             )
@@ -2079,7 +2079,7 @@ def fetch_data_from_europepmc_task(
                 task_id,
                 query_display_name,
                 'NOT_FOUND',
-                'Статья не найдена в Europe PMC.',
+                'Article not found in Europe PMC.',
                 source_api=current_api_name,
                 originating_reference_link_id=originating_reference_link_id,
             )
@@ -2091,7 +2091,7 @@ def fetch_data_from_europepmc_task(
             task_id,
             query_display_name,
             'PROGRESS',
-            'Метаданные получены, обработка...',
+            'Metadata received, processing...',
             progress_percent=40,
             source_api=current_api_name,
             originating_reference_link_id=originating_reference_link_id,
@@ -2134,7 +2134,7 @@ def fetch_data_from_europepmc_task(
                 task_id,
                 query_display_name,
                 'PROGRESS',
-                f'Найден PMCID: {pmcid_for_url}. Запрос полного текста...',
+                f'PMCID found: {pmcid_for_url}. Full text query...',
                 progress_percent=50,
                 source_api=current_api_name,
             )
@@ -2150,7 +2150,7 @@ def fetch_data_from_europepmc_task(
                         task_id,
                         query_display_name,
                         'INFO',
-                        'Полный текст JATS XML успешно получен из Europe PMC.',
+                        'The full text of the JATS XML was successfully retrieved from the Europe PMC.',
                         source_api=current_api_name,
                     )
                 else:
@@ -2159,7 +2159,7 @@ def fetch_data_from_europepmc_task(
                         task_id,
                         query_display_name,
                         'WARNING',
-                        f'Не удалось получить полный текст из EuropePMC для {pmcid_for_url} (статус: {full_text_response.status_code})',
+                        f'Failed to retrieve full text from EuropePMC for {pmcid_for_url} (status: {full_text_response.status_code})',
                         source_api=current_api_name,
                     )
             except Exception as exc:
@@ -2168,7 +2168,7 @@ def fetch_data_from_europepmc_task(
                     task_id,
                     query_display_name,
                     'WARNING',
-                    f'Ошибка при запросе полного текста из Europe PMC: {exc}',
+                    f'Error when requesting full text from Europe PMC: {exc}',
                     source_api=current_api_name,
                 )
 
@@ -2193,7 +2193,7 @@ def fetch_data_from_europepmc_task(
         if full_text_xml_content:
             article_data['article_contents']['full_text_xml_europepmc'] = full_text_xml_content # json.dumps(full_text_xml_pmc)
 
-        final_message = f'Статья {current_api_name} "{article_data['title'][:30]}..." получена.'
+        final_message = f'The article {current_api_name} "{article_data['title'][:30]}..." has been retrieved.'
         send_user_notification(
             user_id,
             task_id,
@@ -2211,7 +2211,7 @@ def fetch_data_from_europepmc_task(
             'article_data': article_data,
         }
     except Exception as e:
-        error_message_for_user = f'Внутренняя ошибка {current_api_name}: {type(e).__name__} - {str(e)}'
+        error_message_for_user = f'Internal error {current_api_name}: {type(e).__name__} - {str(e)}'
         self.update_state(
             state='FAILURE',
             meta={
@@ -2229,7 +2229,7 @@ def fetch_data_from_europepmc_task(
             source_api=current_api_name,
             originating_reference_link_id=originating_reference_link_id,
         )
-        return {'status': 'error', 'message': f'Внутренняя ошибка: {str(e)}', 'identifier': query_display_name}
+        return {'status': 'error', 'message': f'Internal error: {str(e)}', 'identifier': query_display_name}
 
 
 @shared_task(bind=True, max_retries=3, default_retry_delay=60)
@@ -2251,7 +2251,7 @@ def fetch_data_from_rxiv_task(
             task_id,
             query_display_name,
             'PENDING',
-            f'Начинаем обработку {current_api_name}...',
+            f'Start processing {current_api_name}...',
             progress_percent=0,
             source_api=current_api_name,
             originating_reference_link_id=originating_reference_link_id
@@ -2263,7 +2263,7 @@ def fetch_data_from_rxiv_task(
                 task_id,
                 query_display_name,
                 'FAILURE',
-                'DOI не указан.',
+                'DOI not specified.',
                 source_api=current_api_name,
                 originating_reference_link_id=originating_reference_link_id
             )
@@ -2283,7 +2283,7 @@ def fetch_data_from_rxiv_task(
                 task_id,
                 query_display_name,
                 'PROGRESS',
-                f'Попытка запроса к {server_name_attempt.upper()}: {temp_api_url}',
+                f'Attempting a request to {server_name_attempt.upper()}: {temp_api_url}',
                 progress_percent=10,
                 source_api=current_api_name,
                 originating_reference_link_id=originating_reference_link_id
@@ -2309,7 +2309,7 @@ def fetch_data_from_rxiv_task(
                                 task_id,
                                 query_display_name,
                                 'PROGRESS',
-                                f'Данные успешно получены с {actual_server_name.upper()}.',
+                                f'The data was successfully obtained from {actual_server_name.upper()}.',
                                 progress_percent=20,
                                 source_api=current_api_name,
                                 originating_reference_link_id=originating_reference_link_id
@@ -2321,8 +2321,8 @@ def fetch_data_from_rxiv_task(
                                 task_id,
                                 query_display_name,
                                 'INFO',
-                                f'DOI в ответе {actual_server_name.upper()} ({doi_in_response}) не совпал с \
-                                    запрошенным ({clean_doi_for_query}).',
+                                f'The DOI in the {actual_server_name.upper()} ({doi_in_response}) response did not match the \
+                                requested one ({clean_doi_for_query}).',
                                 source_api=current_api_name,
                                 originating_reference_link_id=originating_reference_link_id
                             )
@@ -2332,7 +2332,7 @@ def fetch_data_from_rxiv_task(
                             task_id,
                             query_display_name,
                             'INFO',
-                            f'{server_name_attempt.upper()} вернул пустую коллекцию для DOI.',
+                            f'{server_name_attempt.upper()} returned an empty collection for the DOI.',
                             source_api=current_api_name,
                             originating_reference_link_id=originating_reference_link_id
                         )
@@ -2342,7 +2342,7 @@ def fetch_data_from_rxiv_task(
                         task_id,
                         query_display_name,
                         'INFO',
-                        f'Препринт не найден на {server_name_attempt.upper()}.',
+                        f'Preprint not found on {server_name_attempt.upper()}.',
                         source_api=current_api_name,
                         originating_reference_link_id=originating_reference_link_id
                     )
@@ -2354,7 +2354,7 @@ def fetch_data_from_rxiv_task(
                     task_id,
                     query_display_name,
                     'WARNING',
-                    f'Ошибка сети/API {server_name_attempt.upper()}: {str(exc)}.',
+                    f'Network error/API {server_name_attempt.upper()}: {str(exc)}.',
                     source_api=current_api_name,
                     originating_reference_link_id=originating_reference_link_id
                 )
@@ -2367,7 +2367,7 @@ def fetch_data_from_rxiv_task(
                     task_id,
                     query_display_name,
                     'WARNING',
-                    f'Ошибка декодирования JSON от {server_name_attempt.upper()}: {str(json_exc)}.',
+                    f'JSON decoding error from {server_name_attempt.upper()}: {str(json_exc)}.',
                     source_api=current_api_name,
                     originating_reference_link_id=originating_reference_link_id
                 )
@@ -2380,7 +2380,7 @@ def fetch_data_from_rxiv_task(
                     task_id,
                     query_display_name,
                     'WARNING',
-                    f'Неожиданная ошибка при запросе к {server_name_attempt.upper()}: {str(e_inner)}.',
+                    f'Unexpected error when requesting to {server_name_attempt.upper()}: {str(e_inner)}.',
                     source_api=current_api_name,
                     originating_reference_link_id=originating_reference_link_id
                 )
@@ -2397,7 +2397,7 @@ def fetch_data_from_rxiv_task(
                 task_id,
                 query_display_name,
                 'NOT_FOUND',
-                f'Препринт не найден ни на одном из Rxiv серверов ({", ".join(servers_to_try)}).',
+                f'Preprint not found on any of the Rxiv servers ({", ".join(servers_to_try)}).',
                 source_api=current_api_name,
                 originating_reference_link_id=originating_reference_link_id
             )
@@ -2409,7 +2409,7 @@ def fetch_data_from_rxiv_task(
             user_id,
             task_id, query_display_name,
             'PROGRESS',
-            f'Данные {current_api_name} ({actual_server_name}) получены, обработка...',
+            f'Data {current_api_name} ({actual_server_name}) received, processing...',
             progress_percent=40,
             source_api=current_api_name,
             originating_reference_link_id=originating_reference_link_id
@@ -2432,7 +2432,7 @@ def fetch_data_from_rxiv_task(
                     task_id,
                     query_display_name,
                     'FAILURE',
-                    f'Пользователь ID {user_id} не найден.',
+                    f'User ID {user_id} not found.',
                     source_api=current_api_name,
                     originating_reference_link_id=originating_reference_link_id
                 )
@@ -2478,7 +2478,7 @@ def fetch_data_from_rxiv_task(
                 task_id,
                 query_display_name,
                 'PROGRESS',
-                'Найден JATS XML Rxiv. Загрузка...',
+                'Found JATS XML Rxiv. Loading...',
                 progress_percent=60,
                 source_api=current_api_name
             )
@@ -2500,7 +2500,7 @@ def fetch_data_from_rxiv_task(
                         task_id,
                         query_display_name,
                         'WARNING',
-                        f'Не удалось получить JATS XML от Rxiv: {response_biorxiv['message']}',
+                        f'Failed to retrieve JATS XML from Rxiv: {response_biorxiv['message']}',
                         source_api=current_api_name
                     )
             except Exception as e_jats:
@@ -2509,7 +2509,7 @@ def fetch_data_from_rxiv_task(
                     task_id,
                     query_display_name,
                     'WARNING',
-                    f'Ошибка при обработке JATS XML от Rxiv: {str(e_jats)}',
+                    f'Error when processing JATS XML from Rxiv: {str(e_jats)}',
                     source_api=current_api_name
                 )
 
@@ -2520,7 +2520,7 @@ def fetch_data_from_rxiv_task(
         for k, v in article_data.items():
             print(f'key: {k}, val: {v}')
 
-        final_message = f'Препринт {current_api_name} ({api_server_name_from_data}) "{article_data['title'][:30]}..." {"получен"}.'
+        final_message = f'Preprint {current_api_name} ({api_server_name_from_data}) "{article_data['title'][:30]}..." {"received"}.'
         send_user_notification(
             user_id,
             task_id,
@@ -2542,7 +2542,7 @@ def fetch_data_from_rxiv_task(
         }
 
     except Exception as e:
-        error_message_for_user = f'Внутренняя ошибка {current_api_name}: {type(e).__name__} - {str(e)}'
+        error_message_for_user = f'Internal error {current_api_name}: {type(e).__name__} - {str(e)}'
         self.update_state(
             state='FAILURE',
             meta={
@@ -2560,7 +2560,7 @@ def fetch_data_from_rxiv_task(
             source_api=current_api_name,
             originating_reference_link_id=originating_reference_link_id
         )
-        return {'status': 'error', 'message': f'Внутренняя ошибка: {str(e)}', 'identifier': query_display_name}
+        return {'status': 'error', 'message': f'Internal error: {str(e)}', 'identifier': query_display_name}
 
 
 # Запрос к CrossRef для поиска DOI для цитируемой ссылки
@@ -2574,7 +2574,7 @@ def find_doi_for_reference_task(self, reference_link_id: int, user_id: int):
         task_id,
         display_identifier,
         'PENDING',
-        'Начинаем поиск DOI для ссылки...',
+        'Starting a DOI search for a reference...',
         source_api=FIND_DOI_TASK_SOURCE_NAME,
         originating_reference_link_id=reference_link_id
     )
@@ -2589,7 +2589,7 @@ def find_doi_for_reference_task(self, reference_link_id: int, user_id: int):
             task_id,
             display_identifier,
             'FAILURE',
-            'Ссылка не найдена в базе данных.',
+            'Link not found in the database.',
             source_api=FIND_DOI_TASK_SOURCE_NAME,
             originating_reference_link_id=reference_link_id
         )
@@ -2601,7 +2601,7 @@ def find_doi_for_reference_task(self, reference_link_id: int, user_id: int):
             task_id,
             display_identifier,
             'FAILURE',
-            'Нет прав для выполнения этого действия.',
+            'No rights to perform this action.',
             source_api=FIND_DOI_TASK_SOURCE_NAME,
             originating_reference_link_id=reference_link_id
         )
@@ -2613,7 +2613,7 @@ def find_doi_for_reference_task(self, reference_link_id: int, user_id: int):
             task_id,
             display_identifier,
             'INFO',
-            f'DOI ({ref_link.target_article_doi}) уже указан для этой ссылки.',
+            f'The DOI ({ref_link.target_article_doi}) is already specified for this link.',
             source_api=FIND_DOI_TASK_SOURCE_NAME,
             originating_reference_link_id=reference_link_id
         )
@@ -2640,7 +2640,7 @@ def find_doi_for_reference_task(self, reference_link_id: int, user_id: int):
             task_id,
             display_identifier,
             'FAILURE',
-            'Недостаточно данных для поиска DOI.',
+            'Insufficient data for DOI search.',
             source_api=FIND_DOI_TASK_SOURCE_NAME,
             originating_reference_link_id=reference_link_id
         )
@@ -2665,7 +2665,7 @@ def find_doi_for_reference_task(self, reference_link_id: int, user_id: int):
             task_id,
             display_identifier,
             'PROGRESS',
-            f'Запрос к CrossRef для поиска DOI: "{bibliographic_query[:50]}..."',
+            f'CrossRef query for DOI search: "{bibliographic_query[:50]}..."',
             progress_percent=30,
             source_api=FIND_DOI_TASK_SOURCE_NAME,
             originating_reference_link_id=reference_link_id
@@ -2679,7 +2679,7 @@ def find_doi_for_reference_task(self, reference_link_id: int, user_id: int):
             task_id,
             display_identifier,
             'RETRYING',
-            f'Ошибка сети/API CrossRef при поиске DOI: {str(exc)}. Повтор...',
+            f'CrossRef network/API error when searching for DOI: {str(exc)}. Repeat...',
             source_api=FIND_DOI_TASK_SOURCE_NAME,
             originating_reference_link_id=reference_link_id
         )
@@ -2707,7 +2707,7 @@ def find_doi_for_reference_task(self, reference_link_id: int, user_id: int):
                 task_id,
                 display_identifier,
                 'SUCCESS',
-                f'Найден DOI: {found_doi} (score: {score}) для ссылки.',
+                f'Found DOI: {found_doi} (score: {score}) for reference.',
                 progress_percent=100,
                 source_api=FIND_DOI_TASK_SOURCE_NAME,
                 originating_reference_link_id=reference_link_id
@@ -2735,7 +2735,7 @@ def find_doi_for_reference_task(self, reference_link_id: int, user_id: int):
             task_id,
             display_identifier,
             'FAILURE',
-            'DOI не найден (пустой ответ от CrossRef).',
+            'DOI not found (empty response from CrossRef).',
             progress_percent=100,
             source_api=FIND_DOI_TASK_SOURCE_NAME,
             originating_reference_link_id=reference_link_id
@@ -2758,7 +2758,7 @@ def process_full_text_and_create_segments_task(self, article_id: int, user_id: i
         task_id,
         display_identifier,
         'PENDING',
-        'Начинаем автоматическое связывание текста и ссылок...',
+        'Starting automatic linking of text and links...',
         source_api=current_api_name
     )
 
@@ -2777,7 +2777,7 @@ def process_full_text_and_create_segments_task(self, article_id: int, user_id: i
                 task_id,
                 display_identifier,
                 'INFO',
-                'Не найден полный текст JATS XML для создания сегментов.',
+                'Full JATS XML text for creating segments was not found.',
                 source_api=current_api_name
             )
             return {'status': 'info', 'message': 'No JATS XML found for segmentation.'}
@@ -2790,7 +2790,7 @@ def process_full_text_and_create_segments_task(self, article_id: int, user_id: i
             task_id,
             display_identifier,
             'PROGRESS',
-            'Парсинг списка литературы из XML...',
+            'Parsing a reference list from XML...',
             progress_percent=20,
             source_api=current_api_name
         )
@@ -2803,7 +2803,7 @@ def process_full_text_and_create_segments_task(self, article_id: int, user_id: i
                 task_id,
                 display_identifier,
                 'WARNING',
-                'Не удалось извлечь ссылки из JATS XML. Связывание будет неполным.',
+                'Failed to extract links from JATS XML. Linking will be incomplete.',
                 source_api=current_api_name
             )
 
@@ -2846,7 +2846,7 @@ def process_full_text_and_create_segments_task(self, article_id: int, user_id: i
             task_id,
             display_identifier,
             'PROGRESS',
-            'Анализ текста и создание сегментов...',
+            'Analysing text and creating segments...',
             progress_percent=50,
             source_api=current_api_name
         )
@@ -2905,7 +2905,7 @@ def process_full_text_and_create_segments_task(self, article_id: int, user_id: i
             task_id,
             display_identifier,
             'SUCCESS',
-            f'Автоматическое связывание завершено. Создано {segments_created} сегментов.',
+            f'Automatic linking is complete. {segments_created} segments created.',
             progress_percent=100,
             source_api=current_api_name
         )
@@ -2917,12 +2917,12 @@ def process_full_text_and_create_segments_task(self, article_id: int, user_id: i
             task_id,
             display_identifier,
             'FAILURE',
-            'Статья для анализа не найдена (process_full_text_and_create_segments_task).',
+            'Article not found for analysis (process_full_text_and_create_segments_task).',
             source_api=current_api_name
         )
         return {'status': 'error', 'message': 'Article not found (process_full_text_and_create_segments_task).'}
     except Exception as e:
-        error_message_for_user = f'Ошибка при автоматическом связывании: {type(e).__name__} - {str(e)}'
+        error_message_for_user = f'Error during automatic binding: {type(e).__name__} - {str(e)}'
         send_user_notification(
             user_id,
             task_id,
@@ -2953,7 +2953,7 @@ def analyze_segment_with_llm_task(self, analyzed_segment_id: int, user_id: int):
         task_id,
         display_identifier,
         'PENDING',
-        'Начинаем LLM анализ сегмента...',
+        'Beginning LLM segment analysis...',
         progress_percent=0,
         source_api=current_api_name
     )
@@ -2966,7 +2966,7 @@ def analyze_segment_with_llm_task(self, analyzed_segment_id: int, user_id: int):
             task_id,
             display_identifier,
             'FAILURE',
-            'Анализируемый сегмент не найден.',
+            'The analysed segment is not found.',
             source_api=current_api_name
         )
         return {'status': 'error', 'message': 'AnalyzedSegment not found.'}
@@ -2977,7 +2977,7 @@ def analyze_segment_with_llm_task(self, analyzed_segment_id: int, user_id: int):
             task_id,
             display_identifier,
             'FAILURE',
-            'Нет прав для анализа этого сегмента.',
+            'No rights to analyse this segment.',
             source_api=current_api_name
         )
         return {'status': 'error', 'message': 'Permission denied for this segment.'}
@@ -2988,7 +2988,7 @@ def analyze_segment_with_llm_task(self, analyzed_segment_id: int, user_id: int):
             task_id,
             display_identifier,
             'FAILURE',
-            'Текст сегмента пуст, анализ невозможен.',
+            'Segment text is empty, cannot be analysed.',
             source_api=current_api_name
         )
         return {'status': 'error', 'message': 'Segment text is empty.'}
@@ -3018,9 +3018,9 @@ def analyze_segment_with_llm_task(self, analyzed_segment_id: int, user_id: int):
         for k, v in sorted_cited_references.items():
             if cited_references_info:
                 cited_references_info.append('-' * 60)
-            cited_references_info.append(f"\nИсточник [{k}]:\nЗаголовок: {v['title']}\nТекст: {v['text']}\n")
+            cited_references_info.append(f"\nSource [{k}]:\nTitle: {v['title']}\nText: {v['text']}\n")
 
-    cited_references_text = "\n".join(cited_references_info) if cited_references_info else "Информация о цитируемых источниках не предоставлена."
+    cited_references_text = "\n".join(cited_references_info) if cited_references_info else "Information on cited sources is not provided."
 
     # Формирование промпта
     prompt = f"""Ты выступаешь в роли научного ассистента. Тебе дан текстовый сегмент из научной статьи и информация о цитируемых в нем (или релевантных для него) источниках.
@@ -3053,7 +3053,7 @@ def analyze_segment_with_llm_task(self, analyzed_segment_id: int, user_id: int):
         task_id,
         display_identifier,
         'PROGRESS',
-        'Отправка запроса к LLM...',
+        'Sending a request to the LLM...',
         progress_percent=30,
         source_api=current_api_name
     )
@@ -3100,12 +3100,12 @@ def analyze_segment_with_llm_task(self, analyzed_segment_id: int, user_id: int):
                         llm_response_content = json.loads(json_match.group(0))
                     except json.JSONDecodeError:
                         llm_response_content = {
-                            "analysis_notes": f"LLM вернул текст, но не удалось извлечь JSON: {raw_llm_output}",
+                            "analysis_notes": f"LLM returned the text but failed to extract the JSON: {raw_llm_output}",
                             "veracity_score": None
                         }
                 else:
                     llm_response_content = {
-                        "analysis_notes": f"LLM вернул не JSON ответ: {raw_llm_output}",
+                        "analysis_notes": f"LLM returned a non-JSON response: {raw_llm_output}",
                         "veracity_score": None
                     }
 
@@ -3124,12 +3124,12 @@ def analyze_segment_with_llm_task(self, analyzed_segment_id: int, user_id: int):
                         llm_response_content = json.loads(json_match.group(0))
                     except json.JSONDecodeError:
                         llm_response_content = {
-                            "analysis_notes": f"LLM вернул текст, но не удалось извлечь JSON: {raw_llm_output}",
+                            "analysis_notes": f"LLM returned the text but failed to extract the JSON: {raw_llm_output}",
                             "veracity_score": None
                         }
                 else:
                     llm_response_content = {
-                        "analysis_notes": f"LLM вернул не JSON ответ: {raw_llm_output}",
+                        "analysis_notes": f"LLM returned a non-JSON response: {raw_llm_output}",
                         "veracity_score": None
                     }
 
@@ -3139,12 +3139,12 @@ def analyze_segment_with_llm_task(self, analyzed_segment_id: int, user_id: int):
                 task_id,
                 display_identifier,
                 'WARNING',
-                'LLM не настроен. Используется заглушка.',
+                'LLM is not configured. A blanking plug is used.',
                 source_api=current_api_name
             )
             time.sleep(2)
             llm_response_content = {
-                "analysis_notes": "Заглушка: LLM анализ не выполнен, так как LLM не настроен.",
+                "analysis_notes": "Plug: LLM analysis not performed because LLM is not configured.",
                 "veracity_score": None
             }
             llm_model_used = "stub_model"
@@ -3165,7 +3165,7 @@ def analyze_segment_with_llm_task(self, analyzed_segment_id: int, user_id: int):
                 task_id,
                 display_identifier,
                 'SUCCESS',
-                'LLM анализ сегмента успешно завершен.',
+                'LLM analysis of the segment has been successfully completed.',
                 progress_percent=100,
                 source_api=current_api_name,
                 analysis_data={
@@ -3182,7 +3182,7 @@ def analyze_segment_with_llm_task(self, analyzed_segment_id: int, user_id: int):
                 task_id,
                 display_identifier,
                 'FAILURE',
-                'LLM вернул некорректный или пустой ответ.',
+                'LLM returned an invalid or empty response.',
                 source_api=current_api_name
             )
             # TODO: (сохранение ошибки в segment.llm_analysis_notes) ...

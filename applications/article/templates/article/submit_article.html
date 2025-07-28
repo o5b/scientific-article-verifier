@@ -111,21 +111,21 @@
       notificationHtml += `<strong>${data.message || data.payload?.message}</strong>`;
     } else if (data.type === "task_notification" && data.payload) {
       const p = data.payload;
-      notificationHtml += `<strong>Задача [${p.task_id || "N/A"}] для ${p.source_api || "Источник"} (${p.identifier || "N/A"})</strong><br>`;
-      notificationHtml += `Статус: ${p.status}<br>`;
-      notificationHtml += `Сообщение: ${p.message}<br>`;
+      notificationHtml += `<strong>Task [${p.task_id || "N/A"}] для ${p.source_api || "Source"} (${p.identifier || "N/A"})</strong><br>`;
+      notificationHtml += `Status: ${p.status}<br>`;
+      notificationHtml += `Message: ${p.message}<br>`;
       if (p.progress_percent !== undefined) {
-        notificationHtml += `Прогресс: ${p.progress_percent}%<br>`;
+        notificationHtml += `Progress: ${p.progress_percent}%<br>`;
       }
       if (p.article_id) {
-        notificationHtml += `ID статьи: ${p.article_id} (Создана: ${p.created === undefined ? "N/A" : p.created})<br>`;
+        notificationHtml += `Article ID: ${p.article_id} (Created: ${p.created === undefined ? "N/A" : p.created})<br>`;
       }
     } else if (data.payload) {
-      notificationHtml += `<strong>${data.payload.source_api || "Система"} (${data.payload.identifier || "N/A"})</strong><br>`;
-      notificationHtml += `Статус: ${data.payload.status}<br>`;
-      notificationHtml += `Сообщение: ${data.payload.message}<br>`;
+      notificationHtml += `<strong>${data.payload.source_api || "System"} (${data.payload.identifier || "N/A"})</strong><br>`;
+      notificationHtml += `Status: ${data.payload.status}<br>`;
+      notificationHtml += `Message: ${data.payload.message}<br>`;
       if (data.payload.progress_percent !== undefined) {
-        notificationHtml += `Прогресс: ${data.payload.progress_percent}%<br>`;
+        notificationHtml += `Progress: ${data.payload.progress_percent}%<br>`;
       }
     } else {
       notificationHtml += JSON.stringify(data);

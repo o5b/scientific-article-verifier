@@ -128,22 +128,22 @@ class ArticleAdmin(SortableAdminBase, admin.ModelAdmin):
         (None, {
             'fields': ('user', 'title', 'abstract')
         }),
-        ('Идентификаторы и Источники', {
+        ('Identifiers and Sources', {
             'fields': ('doi', 'pubmed_id', 'pmc_id', 'arxiv_id', 'primary_source_api')
         }),
-        ('Структурированное содержимое', {
+        ('Structured content', {
             'fields': ('structured_content',)
         }),
-        ('Данные для LLM и Ручной Ввод', {
+        ('Data for LLM and Manual Input', {
             'fields': ('cleaned_text_for_llm', 'is_manually_added_full_text')
         }),
-        ('PDF Файл', {
+        ('PDF File', {
             'fields': ('pdf_url', 'pdf_file', 'pdf_text')
         }),
-        ('Метаданные Публикации', {
+        ('Publication metadata', {
             'fields': ('publication_date', 'journal_name')
         }),
-        ('Даты', {
+        ('Dates', {
             'fields': ('created_at', 'updated_at'),
             'classes': ('collapse',)
         }),

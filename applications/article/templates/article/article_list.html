@@ -170,16 +170,16 @@
       </div>
 
       <div class="primary-article-action-buttons">
-        {# Section for linked articles #} {% if item_data.linked_articles %}
+        {# Section for related articles #} {% if item_data.linked_articles %}
         <div class="linked-articles-section">
           <button type="button" class="linked-articles-toggle stroked-button" data-target="linked-articles-{{ item_data.primary_article.pk }}">
-            {% trans 'Linked Articles' %} ({{ item_data.linked_articles|length }})
+            {% trans 'Related Articles' %} ({{ item_data.linked_articles|length }})
           </button>
           <div id="linked-articles-{{ item_data.primary_article.pk }}" class="linked-articles-container">
             <div class="linked-articles-container-outer linked-articles-toggle" isNotChangableText data-target="linked-articles-{{ item_data.primary_article.pk }}">
               <div class="linked-articles-container-inner">
                 <div class="linked-articles-container-head">
-                  <h4>{% trans 'Linked Articles:' %}</h4>
+                  <h4>{% trans 'Related Articles:' %}</h4>
                   <button type="button" class="linked-articles-toggle dialog-toggle" isNotChangableText data-target="linked-articles-{{ item_data.primary_article.pk }}">
                     <svg width="24" height="24" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg" style="pointer-events: none">
                       <path d="M6.4 19L5 17.6L10.6 12L5 6.4L6.4 5L12 10.6L17.6 5L19 6.4L13.4 12L19 17.6L17.6 19L12 13.4L6.4 19Z" fill="black" />
@@ -241,13 +241,13 @@
             const count = this.textContent.match(/\((\d+)\)/); // Извлекаем число в скобках
             if (!BoolIsNotChangableText) {
               // this.textContent = `Скрыть связанные статьи ${count ? count[0] : ""}`;
-              this.textContent = `Cвязанные статьи ${count ? count[0] : ""}`;
+              this.textContent = `Related Articles ${count ? count[0] : ""}`;
             }
           } else {
             targetContainer.style.display = "none";
             const count = this.textContent.match(/\((\d+)\)/);
             if (!!BoolIsNotChangableText) {
-              this.textContent = `Cвязанные статьи ${count ? count[0] : ""}`;
+              this.textContent = `Related Articles ${count ? count[0] : ""}`;
               // this.textContent = `Показать связанные статьи ${count ? count[0] : ""}`;
             }
           }
