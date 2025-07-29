@@ -74,11 +74,20 @@ class Author(models.Model):
 
 class Article(models.Model):
     """Основная модель для хранения научной статьи и ее метаданных."""
-    user = models.ForeignKey(
-        User,
-        on_delete=models.CASCADE,
-        verbose_name=_("Пользователь"),
-        help_text=_("Пользователь, добавивший статью в систему")
+    # user = models.ForeignKey(
+    #     User,
+    #     on_delete=models.CASCADE,
+    #     verbose_name=_("Пользователь"),
+    #     help_text=_("Пользователь, добавивший статью в систему")
+    # )
+
+    users = models.ManyToManyField(
+        to=User,
+        through='ArticleUser',
+        related_name='articles',
+        verbose_name=_("Пользователи"),
+        help_text=_("Пользователи, связанные с этой статьёй")
+        # blank=True,
     )
 
     title = models.TextField(   # TextField для очень длинных названий
@@ -620,3 +629,40 @@ class AnalyzedSegment(models.Model):
     def __str__(self):
         section_info = f"Секция: {self.section_key}" if self.section_key else "Общий текст"
         return f"Сегмент из '{self.article.title[:30]}...' ({section_info}): '{self.segment_text[:50]}...'"
+
+
+class ArticleUser(models.Model):
+    """Промежуточная модель для связи Article и User."""
+    article = models.ForeignKey(
+        Article,
+        on_delete=models.CASCADE
+    )
+
+    user = models.ForeignKey(
+        User,
+        on_delete=models.CASCADE
+    )
+
+    created_at = models.DateTimeField(
+        verbose_name=_("Дата создания"),
+        auto_now_add=True
+    )
+
+    updated_at = models.DateTimeField(
+        verbose_name=_("Дата обновления"),
+        auto_now=True
+    )
+
+    # order = models.PositiveIntegerField(
+    #     verbose_name=_("Порядок"),
+    #     default=0
+    # )
+
+    class Meta:
+        verbose_name = _("Пользователь статьи")
+        verbose_name_plural = _("Пользователи статей")
+        # ordering = ['order']
+        unique_together = ('article', 'user') # Пользователь не может быть дважды связан со статьёй
+        # constraints = [
+        #     models.UniqueConstraint(fields=['article'], name='unique_author_per_article')
+        # ]

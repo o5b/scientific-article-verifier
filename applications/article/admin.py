@@ -3,13 +3,19 @@ from django import forms
 from django.contrib import admin
 from django.utils.html import format_html, mark_safe
 
-from .models import AnalyzedSegment, Article, ArticleAuthor, ArticleContent, Author, ReferenceLink
+from .models import AnalyzedSegment, Article, ArticleAuthor, ArticleContent, Author, ReferenceLink, ArticleUser
 
 
 class ArticleAuthorInline(admin.TabularInline):
     model = ArticleAuthor
     extra = 0
     autocomplete_fields = ['author', 'article']
+
+
+class ArticleUserInline(admin.TabularInline):
+    model = ArticleUser
+    extra = 0
+    autocomplete_fields = ['user', 'article']
 
 
 class ArticleContentInline(admin.StackedInline):
@@ -111,22 +117,22 @@ class ArticleAdmin(SortableAdminBase, admin.ModelAdmin):
         'is_structured_content',
         'is_pdf_file',
         # 'best_oa_pdf_url',
-        'user',
+        # 'users',
         'primary_source_api_label',
         'publication_date',
         'is_manually_added_full_text',
         'updated_at'
     )
-    list_filter = ('publication_date', 'primary_source_api', 'is_manually_added_full_text', 'user')
+    list_filter = ('publication_date', 'primary_source_api', 'is_manually_added_full_text')
     search_fields = ('title', 'doi', 'pubmed_id', 'pmc_id', 'arxiv_id', 'abstract', 'authors__full_name')
     readonly_fields = ('created_at', 'updated_at')
-    autocomplete_fields = ['user']
-    inlines = [ArticleAuthorInline, ArticleContentInline, ReferenceLinkInline]
+    # autocomplete_fields = ['user']
+    inlines = [ArticleUserInline, ArticleAuthorInline, ArticleContentInline, ReferenceLinkInline]
     form = ArticleAdminForm
 
     fieldsets = (
         (None, {
-            'fields': ('user', 'title', 'abstract')
+            'fields': ('title', 'abstract')
         }),
         ('Идентификаторы и Источники', {
             'fields': ('doi', 'pubmed_id', 'pmc_id', 'arxiv_id', 'primary_source_api')
