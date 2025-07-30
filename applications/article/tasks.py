@@ -42,7 +42,7 @@ from .helpers import (
     find_orcid,
     get_xml_from_biorxiv,
 )
-from .models import AnalyzedSegment, Article, ArticleAuthor, ArticleContent, Author, ReferenceLink
+from .models import AnalyzedSegment, Article, ArticleAuthor, ArticleContent, Author, ReferenceLink, ArticleUser
 
 # --- Константы API из настроек ---
 APP_EMAIL = getattr(settings, 'APP_EMAIL', 'transposons.chat@gmail.com') # РЕАЛЬНЫЙ EMAIL в settings.py или здесь
@@ -146,7 +146,7 @@ def process_article_pipeline_task(
         try:
             with transaction.atomic():
                 creation_defaults = {
-                    'user': article_owner,
+                    # 'user': article_owner,
                     'title': f"Статья в обработке: {pipeline_display_name}",
                     'is_user_initiated': originating_reference_link_id is None # True если это прямой вызов, False если для ссылки
                 }
@@ -156,11 +156,24 @@ def process_article_pipeline_task(
                     defaults=creation_defaults
                 )
 
+                if article:
+                    ArticleUser.objects.get_or_create(article=article, user=article_owner)
+
+                # # Если статья уже существовала, но была не "основной", а пользователь сейчас добавляет ее напрямую
+                # if not created_article_in_pipeline and article.user == article_owner and \
+                #     not article.is_user_initiated and originating_reference_link_id is None:
+                #         article.is_user_initiated = True
+                #         article.save(update_fields=['is_user_initiated', 'updated_at'])
+
                 # Если статья уже существовала, но была не "основной", а пользователь сейчас добавляет ее напрямую
-                if not created_article_in_pipeline and article.user == article_owner and \
-                    not article.is_user_initiated and originating_reference_link_id is None:
-                        article.is_user_initiated = True
-                        article.save(update_fields=['is_user_initiated', 'updated_at'])
+                if (
+                    not created_article_in_pipeline \
+                    and article.users.filter(id=article_owner.id).exists() \
+                    and not article.is_user_initiated \
+                    and originating_reference_link_id is None
+                ):
+                    article.is_user_initiated = True
+                    article.save(update_fields=['is_user_initiated', 'updated_at'])
 
             if created_article_in_pipeline:
                 send_user_notification(
@@ -216,6 +229,7 @@ def process_article_pipeline_task(
             header_tasks = []
             # Обработка ссылок включается только если это не обработка уже существующей ссылки (т.е. "корневой" вызов)
             should_process_refs_in_crossref = (originating_reference_link_id is None)
+
             callback = process_data_task.s(
                 article_id=article_id_for_subtasks,
                 user_id=user_id,
@@ -362,18 +376,19 @@ def process_data_task(
 
         if article_owner and article_id:
             try:
-                article = Article.objects.get(id=article_id, user=article_owner)
+                # article = Article.objects.get(id=article_id, user=article_owner)
+                article = Article.objects.get(id=article_id, users=article_owner)
             except Article.DoesNotExist:
                 send_user_notification(
                     user_id,
                     task_id,
                     query_display_name,
                     'FAILURE',
-                    f'Статья ID {article_id} (для обновления) не найдена/не принадлежит пользователю.',
+                    f'Статья ID {article_id} (для обновления) не найдена/не принадлежит пользователю: {article_owner}.',
                     # source_api=current_api_name,
                     originating_reference_link_id=originating_reference_link_id,
                 )
-                return {'status': 'error', 'message': f'PROCESS_DATA_TASK: Article ID {article_id} not found.'}
+                return {'status': 'error', 'message': f'PROCESS_DATA_TASK: Article ID {article_id} not found / not owned by user: {article_owner}.'}
 
         if not article:
             send_user_notification(
@@ -1059,7 +1074,8 @@ def process_data_task(
         # обновление ReferenceLink, если originating_reference_link_id
         if originating_reference_link_id and article:
             try:
-                ref_link = ReferenceLink.objects.get(id=originating_reference_link_id, source_article__user=article_owner)
+                # ref_link = ReferenceLink.objects.get(id=originating_reference_link_id, source_article__user=article_owner)
+                ref_link = ReferenceLink.objects.get(id=originating_reference_link_id, source_article__users=article_owner)
                 ref_link.resolved_article = article
                 ref_link.status = ReferenceLink.StatusChoices.ARTICLE_LINKED
                 ref_link.save(update_fields=['resolved_article', 'status', 'updated_at'])
@@ -2580,7 +2596,8 @@ def find_doi_for_reference_task(self, reference_link_id: int, user_id: int):
     )
 
     try:
-        ref_link = ReferenceLink.objects.select_related('source_article__user').get(id=reference_link_id)
+        # ref_link = ReferenceLink.objects.select_related('source_article__user').get(id=reference_link_id)
+        ref_link = ReferenceLink.objects.select_related('source_article').prefetch_related('source_article__users').get(id=reference_link_id)
         ref_link.status = ReferenceLink.StatusChoices.DOI_LOOKUP_IN_PROGRESS
         ref_link.save(update_fields=['status', 'updated_at'])
     except ReferenceLink.DoesNotExist:
@@ -2595,7 +2612,8 @@ def find_doi_for_reference_task(self, reference_link_id: int, user_id: int):
         )
         return {'status': 'error', 'message': 'ReferenceLink not found.'}
 
-    if ref_link.source_article.user_id != user_id:
+    # if ref_link.source_article.user_id != user_id:
+    if not ref_link.source_article.users.filter(id=user_id).exists():
         send_user_notification(
             user_id,
             task_id,
@@ -2763,7 +2781,8 @@ def process_full_text_and_create_segments_task(self, article_id: int, user_id: i
     )
 
     try:
-        article = Article.objects.get(id=article_id, user_id=user_id)
+        # article = Article.objects.get(id=article_id, user_id=user_id)
+        article = Article.objects.get(id=article_id, users__id=user_id)
         # Находим JATS XML для этой статьи. Предпочитаем PMC, затем Rxiv, затем любой другой JATS.
         xml_content_entry = ArticleContent.objects.filter(
             article=article,
@@ -2959,7 +2978,10 @@ def analyze_segment_with_llm_task(self, analyzed_segment_id: int, user_id: int):
     )
 
     try:
-        segment = AnalyzedSegment.objects.select_related('article__user').prefetch_related('cited_references__resolved_article').get(id=analyzed_segment_id)
+        # segment = AnalyzedSegment.objects.select_related('article__user').prefetch_related('cited_references__resolved_article').get(id=analyzed_segment_id)
+        segment = AnalyzedSegment.objects.select_related('article').prefetch_related(
+            'article__users', 'cited_references__resolved_article'
+        ).get(id=analyzed_segment_id)
     except AnalyzedSegment.DoesNotExist:
         send_user_notification(
             user_id,
@@ -2971,7 +2993,8 @@ def analyze_segment_with_llm_task(self, analyzed_segment_id: int, user_id: int):
         )
         return {'status': 'error', 'message': 'AnalyzedSegment not found.'}
 
-    if segment.article.user_id != user_id:
+    # if segment.article.user_id != user_id:
+    if not segment.article.users.filter(id=user_id).exists():
         send_user_notification(
             user_id,
             task_id,
@@ -3063,15 +3086,11 @@ def analyze_segment_with_llm_task(self, analyzed_segment_id: int, user_id: int):
 
     try:
         if getattr(settings, 'LLM_PROVIDER_FOR_ANALYSIS', None) == "OpenAI" and settings.OPENAI_API_KEY:
-            # client = OpenAI(api_key=settings.OPENAI_API_KEY)
-            # llm_model_used = "gpt-3.5-turbo" # или gpt-4o, gpt-4-turbo
-            # llm_model_used = getattr(settings, 'OPENAI_DEFAULT_MODEL', 'gpt-4o-mini')
+            client = OpenAI(api_key=settings.OPENAI_API_KEY)
+            llm_model_used = getattr(settings, 'OPENAI_DEFAULT_MODEL', 'gpt-4o-mini')
 
-            client = OpenAI(
-                base_url="http://80.209.242.40:8000/v1",
-                api_key=settings.OPENAI_API_KEY
-            )
-            llm_model_used = "llama-3.3-70b-instruct"
+            # client = OpenAI(base_url="http://80.209.242.40:8000/v1", api_key=settings.OPENAI_API_KEY)
+            # llm_model_used = "llama-3.3-70b-instruct"
 
             chat_completion = client.chat.completions.create(
                 model=llm_model_used,

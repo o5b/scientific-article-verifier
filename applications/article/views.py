@@ -18,17 +18,30 @@ from .serializers import (
 from .tasks import analyze_segment_with_llm_task, find_doi_for_reference_task, process_article_pipeline_task
 
 
+# class IsOwnerOfSourceArticle(permissions.BasePermission):
+#     """
+#     Разрешение, которое позволяет изменять/удалять объект
+#     только если пользователь является владельцем исходной статьи.
+#     """
+#     def has_object_permission(self, request, view, obj):
+#         # Разрешения на чтение разрешены всем (например, GET, HEAD, OPTIONS)
+#         if request.method in permissions.SAFE_METHODS:
+#             return True
+#         # Разрешения на запись даются только владельцу исходной статьи
+#         return obj.source_article.user == request.user
+
 class IsOwnerOfSourceArticle(permissions.BasePermission):
     """
     Разрешение, которое позволяет изменять/удалять объект
-    только если пользователь является владельцем исходной статьи.
+    только если пользователь является одним из пользователей исходной статьи.
     """
+
     def has_object_permission(self, request, view, obj):
         # Разрешения на чтение разрешены всем (например, GET, HEAD, OPTIONS)
         if request.method in permissions.SAFE_METHODS:
             return True
-        # Разрешения на запись даются только владельцу исходной статьи
-        return obj.source_article.user == request.user
+        # Разрешения на запись даются только если пользователь связан со статьёй
+        return obj.source_article.users.filter(id=request.user.id).exists()
 
 
 class AuthorViewSet(viewsets.ModelViewSet):
@@ -40,6 +53,26 @@ class AuthorViewSet(viewsets.ModelViewSet):
     permission_classes = [permissions.IsAuthenticatedOrReadOnly]
 
 
+# class ArticleViewSet(viewsets.ModelViewSet):
+#     """
+#     API endpoint, который позволяет просматривать и редактировать статьи.
+#     """
+#     serializer_class = ArticleSerializer
+#     permission_classes = [permissions.IsAuthenticated] # Или IsAuthenticatedOrReadOnly
+
+#     def get_queryset(self):
+#         user = self.request.user
+#         if user.is_authenticated:
+#             # Админы видят всё, обычные пользователи - только свои статьи
+#             # Это также неявно защитит от удаления чужих статей через стандартный `destroy`
+#             if user.is_staff:
+#                 return Article.objects.prefetch_related('articleauthororder_set__author', 'contents', 'references_made').select_related('user').all()
+#             return Article.objects.filter(user=user).prefetch_related('articleauthororder_set__author', 'contents', 'references_made').select_related('user')
+#         return Article.objects.none()
+
+#     def perform_create(self, serializer):
+#         serializer.save(user=self.request.user)
+
 class ArticleViewSet(viewsets.ModelViewSet):
     """
     API endpoint, который позволяет просматривать и редактировать статьи.
@@ -50,15 +83,18 @@ class ArticleViewSet(viewsets.ModelViewSet):
     def get_queryset(self):
         user = self.request.user
         if user.is_authenticated:
-            # Админы видят всё, обычные пользователи - только свои статьи
-            # Это также неявно защитит от удаления чужих статей через стандартный `destroy`
+            base_queryset = Article.objects.prefetch_related(
+                'articleauthor_set__author', 'contents', 'references_made'
+            )
             if user.is_staff:
-                return Article.objects.prefetch_related('articleauthororder_set__author', 'contents', 'references_made').select_related('user').all()
-            return Article.objects.filter(user=user).prefetch_related('articleauthororder_set__author', 'contents', 'references_made').select_related('user')
+                return base_queryset.all()
+            return base_queryset.filter(users=user)
         return Article.objects.none()
 
     def perform_create(self, serializer):
-        serializer.save(user=self.request.user)
+        article = serializer.save()
+        # Привязать текущего пользователя к статье через промежуточную таблицу
+        article.users.add(self.request.user)
 
 
 class ArticleContentViewSet(viewsets.ModelViewSet):
@@ -85,7 +121,8 @@ class ReferenceLinkViewSet(viewsets.ModelViewSet):
             if user.is_staff: # Админы видят все
                 return super().get_queryset()
             # Пользователи видят ссылки, относящиеся к их статьям
-            return super().get_queryset().filter(source_article__user=user)
+            # return super().get_queryset().filter(source_article__user=user)
+            return super().get_queryset().filter(source_article__users=user)
         return ReferenceLink.objects.none()
 
 
@@ -120,7 +157,8 @@ class LoadReferencedArticleAPIView(APIView):
         reference_link = get_object_or_404(ReferenceLink, pk=pk)
 
         # Проверка, что пользователь является владельцем исходной статьи
-        if reference_link.source_article.user != request.user:
+        # if reference_link.source_article.user != request.user:
+        if not reference_link.source_article.users.filter(id=request.user.id).exists():
             return Response(
                 {"error": "У вас нет прав для выполнения этого действия."},
                 status=status.HTTP_403_FORBIDDEN
@@ -162,7 +200,8 @@ class FindDoiForReferenceAPIView(APIView):
     def post(self, request, pk, format=None):
         reference_link = get_object_or_404(ReferenceLink, pk=pk)
 
-        if reference_link.source_article.user != request.user:
+        # if reference_link.source_article.user != request.user:
+        if not reference_link.source_article.users.filter(id=request.user.id).exists():
             return Response(
                 {"error": "У вас нет прав для выполнения этого действия."},
                 status=status.HTTP_403_FORBIDDEN
@@ -175,7 +214,7 @@ class FindDoiForReferenceAPIView(APIView):
             )
 
         if not reference_link.raw_reference_text and not (reference_link.manual_data_json and reference_link.manual_data_json.get('title')):
-             return Response(
+            return Response(
                 {"error": "Недостаточно данных (текст ссылки или название) для поиска DOI."},
                 status=status.HTTP_400_BAD_REQUEST
             )
@@ -200,7 +239,8 @@ class FindAllReferenceDoisAPIView(APIView):
     def post(self, request, pk, format=None): # pk - это ID статьи
         article = get_object_or_404(Article, pk=pk)
 
-        if article.user != request.user:
+        # if article.user != request.user:
+        if not article.users.filter(id=request.user.id).exists():
             return Response(
                 {"error": "У вас нет прав для выполнения этого действия."},
                 status=status.HTTP_403_FORBIDDEN
@@ -259,7 +299,8 @@ class LoadAllLinkedReferencesAPIView(APIView):
     def post(self, request, pk, format=None): # pk здесь - это ID статьи
         article = get_object_or_404(Article, pk=pk)
 
-        if article.user != request.user:
+        # if article.user != request.user:
+        if not article.users.filter(id=request.user.id).exists():
             return Response(
                 {"error": "У вас нет прав для выполнения этого действия."},
                 status=status.HTTP_403_FORBIDDEN
@@ -313,11 +354,9 @@ class ReprocessArticleAPIView(APIView):
     def post(self, request, pk, format=None): # pk здесь - это ID статьи
         article = get_object_or_404(Article, pk=pk)
 
-        if article.user != request.user:
-            return Response(
-                {"error": "У вас нет прав для выполнения этого действия."},
-                status=status.HTTP_403_FORBIDDEN
-            )
+        # if article.user != request.user:
+        if not article.users.filter(id=request.user.id).exists():
+            return Response({"error": "У вас нет прав для выполнения этого действия."}, status=status.HTTP_403_FORBIDDEN)
 
         # Определяем основной идентификатор для перезапуска. Приоритет DOI.
         identifier_value = None
@@ -350,10 +389,6 @@ class ReprocessArticleAPIView(APIView):
             # originating_reference_link_id по умолчанию None
         )
 
-        # Можно обновить какой-нибудь статус у самой статьи, например "ожидает переобработки"
-        # article.processing_status = "reprocessing_queued" # Если бы у вас было такое поле
-        # article.save()
-
         return Response(
             {"message": f"Запрос на переобработку статьи '{article.title[:50]}...' отправлен.", "task_id": pipeline_task.id},
             status=status.HTTP_202_ACCEPTED
@@ -370,61 +405,80 @@ class AnalyzedSegmentViewSet(viewsets.ModelViewSet):
     def get_queryset(self):
         # Пользователь может видеть/редактировать только сегменты статей, которыми он владеет
         user = self.request.user
+        base_qs = AnalyzedSegment.objects.select_related('article', 'user').prefetch_related('cited_references')
         if user.is_staff: # Админы видят все
-            return AnalyzedSegment.objects.select_related('article', 'user').prefetch_related('cited_references').all()
-        return AnalyzedSegment.objects.select_related('article', 'user').prefetch_related('cited_references').filter(article__user=user)
+            return base_qs.all()
+        return base_qs.filter(article__users=user)
 
     def perform_create(self, serializer):
-        # Автоматически устанавливаем пользователя и статью (если она передается через URL или проверяется)
-        # Если article_id передается в теле запроса, сериализатор его уже должен обработать
-        # благодаря 'source' в PrimaryKeyRelatedField.
-        # Мы просто устанавливаем пользователя.
-        article_id = self.request.data.get('article_id') # Или self.kwargs.get('article_pk') для вложенных URL
+        article_id = self.request.data.get('article_id')
         if not article_id:
             raise serializer.ValidationError({"article_id": "Это поле обязательно."})
         try:
-            article = Article.objects.get(pk=article_id, user=self.request.user)
+            article = Article.objects.get(pk=article_id, users=self.request.user)
         except Article.DoesNotExist:
             raise serializer.ValidationError({"article_id": "Указанная статья не найдена или не принадлежит вам."})
 
         serializer.save(user=self.request.user, article=article)
 
     def perform_update(self, serializer):
-        # При обновлении, user и article не должны меняться через этот эндпоинт.
-        # Сериализатор уже должен был обработать `validated_data`.
-        # Убедимся, что пользователь не пытается изменить сегмент чужой статьи (get_object сделает это).
         serializer.save()
-        # Если бы user мог меняться, то: serializer.save(user=self.request.user)
 
+
+# class RunLLMAnalysisForSegmentAPIView(APIView):
+#     permission_classes = [permissions.IsAuthenticated]
+
+#     def post(self, request, pk, format=None): # pk - это ID AnalyzedSegment
+#         segment = get_object_or_404(AnalyzedSegment, pk=pk)
+
+#         # Проверка, что пользователь является владельцем статьи, к которой относится сегмент
+#         if segment.article.user != request.user:
+#             return Response(
+#                 {"error": "У вас нет прав для анализа этого сегмента."},
+#                 status=status.HTTP_403_FORBIDDEN
+#             )
+
+#         if not segment.segment_text:
+#              return Response({"error": "Текст сегмента пуст."}, status=status.HTTP_400_BAD_REQUEST)
+
+#         # Запускаем Celery задачу
+#         # Передаем segment.id и request.user.id
+#         # section_text и section_key уже есть в объекте segment, задача их загрузит
+#         llm_task = analyze_segment_with_llm_task.delay(
+#             analyzed_segment_id=segment.id,
+#             user_id=request.user.id
+#             # analysis_type можно передавать из запроса, если хотите разные типы анализа
+#         )
+
+#         # Можно обновить статус сегмента на "анализ запущен"
+#         segment.llm_analysis_notes = "LLM анализ запущен..."
+#         segment.llm_veracity_score = None # Сбрасываем предыдущий результат, если есть
+#         segment.save(update_fields=['llm_analysis_notes', 'llm_veracity_score', 'updated_at'])
+
+#         return Response(
+#             {"message": f"LLM анализ для сегмента ID {segment.id} поставлен в очередь.", "task_id": llm_task.id},
+#             status=status.HTTP_202_ACCEPTED
+#         )
 
 class RunLLMAnalysisForSegmentAPIView(APIView):
     permission_classes = [permissions.IsAuthenticated]
 
-    def post(self, request, pk, format=None): # pk - это ID AnalyzedSegment
+    def post(self, request, pk, format=None):  # pk — ID AnalyzedSegment
         segment = get_object_or_404(AnalyzedSegment, pk=pk)
 
-        # Проверка, что пользователь является владельцем статьи, к которой относится сегмент
-        if segment.article.user != request.user:
-            return Response(
-                {"error": "У вас нет прав для анализа этого сегмента."},
-                status=status.HTTP_403_FORBIDDEN
-            )
+        # Проверка, что пользователь связан с статьёй, к которой относится сегмент
+        if not segment.article.users.filter(id=request.user.id).exists():
+            return Response({"error": "У вас нет прав для анализа этого сегмента."}, status=status.HTTP_403_FORBIDDEN)
 
         if not segment.segment_text:
-             return Response({"error": "Текст сегмента пуст."}, status=status.HTTP_400_BAD_REQUEST)
+            return Response({"error": "Текст сегмента пуст."}, status=status.HTTP_400_BAD_REQUEST)
 
-        # Запускаем Celery задачу
-        # Передаем segment.id и request.user.id
-        # section_text и section_key уже есть в объекте segment, задача их загрузит
-        llm_task = analyze_segment_with_llm_task.delay(
-            analyzed_segment_id=segment.id,
-            user_id=request.user.id
-            # analysis_type можно передавать из запроса, если хотите разные типы анализа
-        )
+        # Запуск Celery-задачи
+        llm_task = analyze_segment_with_llm_task.delay(analyzed_segment_id=segment.id, user_id=request.user.id)
 
-        # Можно обновить статус сегмента на "анализ запущен"
+        # Обновляем статус
         segment.llm_analysis_notes = "LLM анализ запущен..."
-        segment.llm_veracity_score = None # Сбрасываем предыдущий результат, если есть
+        segment.llm_veracity_score = None
         segment.save(update_fields=['llm_analysis_notes', 'llm_veracity_score', 'updated_at'])
 
         return Response(

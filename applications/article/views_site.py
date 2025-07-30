@@ -11,10 +11,18 @@ def article_submission_page(request):
 
 @login_required
 def article_detail_page(request, pk):
-    article = get_object_or_404(Article, pk=pk, user=request.user)
+    article = get_object_or_404(Article, pk=pk, users=request.user)
+
     contents = ArticleContent.objects.filter(article=article).order_by('source_api_name', 'format_type')
+
     references_made = ReferenceLink.objects.filter(source_article=article).select_related('resolved_article').order_by('id')
-    analyzed_segments = AnalyzedSegment.objects.filter(article=article).select_related('user').prefetch_related('cited_references__resolved_article').order_by('created_at')
+
+    analyzed_segments = AnalyzedSegment.objects.filter(
+        article=article
+    ).select_related('user').prefetch_related(
+        'cited_references__resolved_article'
+    ).order_by('created_at')
+
     context = {
         'article': article,
         'contents': contents,
@@ -23,6 +31,7 @@ def article_detail_page(request, pk):
         'user_id': request.user.id,
         'ref_status_choices': ReferenceLink.StatusChoices.choices,
     }
+
     return render(request, 'article/article_detail.html', context)
 
 
@@ -30,7 +39,7 @@ def article_detail_page(request, pk):
 def article_list_page(request):
     # Получаем ТОЛЬКО основные статьи пользователя (где is_user_initiated = True)
     primary_articles_qs = Article.objects.filter(
-        user=request.user,
+        users=request.user,
         is_user_initiated=True
     ).prefetch_related(
         'authors',
@@ -43,6 +52,7 @@ def article_list_page(request):
     for article in primary_articles_qs:
         linked_articles_list = []
         seen_linked_article_ids = set()
+
         for ref_link in article.references_made.all(): # references_made уже предзагружены
             if ref_link.resolved_article and ref_link.resolved_article.id not in seen_linked_article_ids:
                 # Связанная статья может быть is_user_initiated=False или даже True, если пользователь добавил ее отдельно

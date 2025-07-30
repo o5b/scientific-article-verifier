@@ -117,7 +117,7 @@ class ArticleAdmin(SortableAdminBase, admin.ModelAdmin):
         'is_structured_content',
         'is_pdf_file',
         # 'best_oa_pdf_url',
-        # 'users',
+        'get_users',
         'primary_source_api_label',
         'publication_date',
         'is_manually_added_full_text',
@@ -179,8 +179,17 @@ class ArticleAdmin(SortableAdminBase, admin.ModelAdmin):
         return obj.primary_source_api
     primary_source_api_label.short_description = 'Источник'
 
+    def get_users(self, obj):
+        return ", ".join([user.username for user in obj.users.all()])
+    get_users.short_description = 'Users'
+
 
 @admin.register(AnalyzedSegment)
 class AnalyzedSegmentAdmin(admin.ModelAdmin):
     list_display = ['id', 'article', 'section_key', 'created_at']
     search_fields = ['article']
+
+
+@admin.register(ArticleUser)
+class ArticleUserAdmin(admin.ModelAdmin):
+    list_display = ['pk', 'user', 'article']

@@ -14,8 +14,6 @@ import requests
 from asgiref.sync import async_to_sync, sync_to_async
 from channels.layers import get_channel_layer
 
-# from scidownl import scihub_download
-# from scidownl.core.updater import SearchScihubDomainUpdater
 # from django.conf import settings
 from django.utils import timezone
 

@@ -143,7 +143,6 @@ class Article(models.Model):
         null=True,
         blank=True
     )
-    # Можно добавить другие идентификаторы по мере необходимости (PМCID, etc.)
 
     # --- Данные для LLM и ручного ввода ---
     cleaned_text_for_llm = models.TextField(
@@ -276,9 +275,10 @@ class Article(models.Model):
         Секции добавляются в предопределенном порядке.
         """
         if not self.structured_content or not isinstance(self.structured_content, dict):
-            # Если нет структурированного контента, используем абстракт (если есть) или оставляем пустым
+            # Если нет структурированного контента оставляем пустым
             # self.cleaned_text_for_llm = self.abstract if self.abstract else ""
             return None
+
         # Если только 'title' и/или 'abstract' то не продолжаем
         structured_content_keys = list(self.structured_content.keys())
         for key in ['title', 'abstract']:

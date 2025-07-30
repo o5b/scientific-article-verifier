@@ -1,6 +1,6 @@
 from rest_framework import serializers
 
-from .models import AnalyzedSegment, Article, ArticleAuthor, ArticleContent, Author, ReferenceLink, User
+from .models import AnalyzedSegment, Article, ArticleAuthor, ArticleContent, Author, ReferenceLink, User, ArticleUser
 
 
 class UserSerializer(serializers.ModelSerializer):
@@ -69,7 +69,7 @@ class ReferenceLinkSerializer(serializers.ModelSerializer):
 
 
 class ArticleAuthorSerializer(serializers.ModelSerializer):
-    """Сериализатор для отображения авторов с порядком в статье."""
+    """Сериализатор для отображения авторов."""
     # author = AuthorSerializer(read_only=True) # Если хотим полную инфу об авторе
     author_id = serializers.PrimaryKeyRelatedField(queryset=Author.objects.all(), source='author')
     author_name = serializers.StringRelatedField(source='author.full_name', read_only=True)
@@ -79,57 +79,132 @@ class ArticleAuthorSerializer(serializers.ModelSerializer):
         fields = ['author_id', 'author_name']
 
 
+# class ArticleSerializer(serializers.ModelSerializer):
+#     user = UserSerializer(read_only=True)
+#     user_id = serializers.PrimaryKeyRelatedField(queryset=User.objects.all(), source='user', write_only=True, required=False)
+#     article_authors = ArticleAuthorSerializer(source='articleauthor_set', many=True, required=False)
+#     contents = ArticleContentSerializer(many=True, read_only=True)
+#     references_made = ReferenceLinkSerializer(many=True, read_only=True)
+#     # structured_content по умолчанию будет доступен для записи, т.к. это JSONField
+#     # cleaned_text_for_llm будет только для чтения, т.к. генерируется на бэкенде
+
+#     class Meta:
+#         model = Article
+#         fields = [
+#             'id', 'user', 'user_id', 'title', 'abstract', 'doi', 'pubmed_id', 'arxiv_id',
+#             'cleaned_text_for_llm', 'is_manually_added_full_text',
+#             'primary_source_api', 'publication_date', 'journal_name',
+#             'oa_status', 'best_oa_url', 'best_oa_pdf_url', 'oa_license', # Поля Unpaywall
+#             'is_user_initiated',
+#             'structured_content',
+#             'article_authors',
+#             'contents', 'references_made',
+#             'created_at', 'updated_at'
+#         ]
+#         read_only_fields = ('created_at', 'updated_at', 'user', 'cleaned_text_for_llm')
+
+#     def update(self, instance, validated_data):
+#         # Стандартное обновление полей, включая structured_content, если оно есть в validated_data
+#         # authors_data нужно обработать до super().update, если он не обрабатывает вложенные M2M по умолчанию
+#         authors_data = validated_data.pop('articleauthor_set', None)
+
+#         # Обновляем поля, которые не являются M2M или специальными
+#         # structured_content будет обновлен через super().update()
+#         instance = super().update(instance, validated_data)
+
+#         # Обработка авторов (если были переданы)
+#         if authors_data is not None:
+#             instance.articleauthor_set.all().delete()
+#             for author_data in authors_data:
+#                 # Убедимся, что author_data['author'] - это объект Author
+#                 author_instance = author_data.get('author')
+#                 if isinstance(author_instance, Author):
+#                     ArticleAuthor.objects.create(article=instance, author=author_instance)
+#                     #  ArticleAuthor.objects.create(article=instance, author=author_instance, order=author_data.get('order',0))
+#                 elif isinstance(author_instance, int): # Если передан ID
+#                     try:
+#                         author_obj = Author.objects.get(pk=author_instance)
+#                         ArticleAuthor.objects.create(article=instance, author=author_obj)
+#                         # ArticleAuthor.objects.create(article=instance, author=author_obj, order=author_data.get('order',0))
+#                     except Author.DoesNotExist:
+#                         pass # Логировать ошибку или пропустить
+
+#         return instance
+
 class ArticleSerializer(serializers.ModelSerializer):
-    user = UserSerializer(read_only=True)
-    user_id = serializers.PrimaryKeyRelatedField(queryset=User.objects.all(), source='user', write_only=True, required=False)
+    users = UserSerializer(many=True, read_only=True)  # список пользователей, связанных с Article
+    user_ids = serializers.PrimaryKeyRelatedField(
+        many=True,
+        queryset=User.objects.all(),
+        write_only=True,
+        required=False
+    )
     article_authors = ArticleAuthorSerializer(source='articleauthor_set', many=True, required=False)
     contents = ArticleContentSerializer(many=True, read_only=True)
     references_made = ReferenceLinkSerializer(many=True, read_only=True)
-    # structured_content по умолчанию будет доступен для записи, т.к. это JSONField
-    # cleaned_text_for_llm будет только для чтения, т.к. генерируется на бэкенде
 
     class Meta:
         model = Article
         fields = [
-            'id', 'user', 'user_id', 'title', 'abstract', 'doi', 'pubmed_id', 'arxiv_id',
+            'id', 'users', 'user_ids', 'title', 'abstract', 'doi', 'pubmed_id', 'arxiv_id',
             'cleaned_text_for_llm', 'is_manually_added_full_text',
             'primary_source_api', 'publication_date', 'journal_name',
-            'oa_status', 'best_oa_url', 'best_oa_pdf_url', 'oa_license', # Поля Unpaywall
+            'oa_status', 'best_oa_url', 'best_oa_pdf_url', 'oa_license',
             'is_user_initiated',
             'structured_content',
             'article_authors',
             'contents', 'references_made',
             'created_at', 'updated_at'
         ]
-        read_only_fields = ('created_at', 'updated_at', 'user', 'cleaned_text_for_llm')
+        read_only_fields = ('created_at', 'updated_at', 'users', 'cleaned_text_for_llm')
 
-    def update(self, instance, validated_data):
-        # Стандартное обновление полей, включая structured_content, если оно есть в validated_data
-        # authors_data нужно обработать до super().update, если он не обрабатывает вложенные M2M по умолчанию
+    def create(self, validated_data):
+        user_ids = validated_data.pop('user_ids', [])
         authors_data = validated_data.pop('articleauthor_set', None)
 
-        # Обновляем поля, которые не являются M2M или специальными
-        # structured_content будет обновлен через super().update()
+        article = super().create(validated_data)
+
+        # Привязываем пользователей через M2M
+        for user in user_ids:
+            ArticleUser.objects.create(article=article, user=user)
+
+        # Обработка авторов
+        if authors_data:
+            for author_data in authors_data:
+                self._create_article_author(article, author_data)
+
+        return article
+
+    def update(self, instance, validated_data):
+        user_ids = validated_data.pop('user_ids', None)
+        authors_data = validated_data.pop('articleauthor_set', None)
+
         instance = super().update(instance, validated_data)
 
-        # Обработка авторов (если были переданы)
+        # Обновляем пользователей, если переданы
+        if user_ids is not None:
+            instance.users.clear()
+            for user in user_ids:
+                ArticleUser.objects.create(article=instance, user=user)
+
+        # Обновляем авторов, если переданы
         if authors_data is not None:
             instance.articleauthor_set.all().delete()
             for author_data in authors_data:
-                # Убедимся, что author_data['author'] - это объект Author
-                author_instance = author_data.get('author')
-                if isinstance(author_instance, Author):
-                    ArticleAuthor.objects.create(article=instance, author=author_instance)
-                    #  ArticleAuthor.objects.create(article=instance, author=author_instance, order=author_data.get('order',0))
-                elif isinstance(author_instance, int): # Если передан ID
-                    try:
-                        author_obj = Author.objects.get(pk=author_instance)
-                        ArticleAuthor.objects.create(article=instance, author=author_obj)
-                        # ArticleAuthor.objects.create(article=instance, author=author_obj, order=author_data.get('order',0))
-                    except Author.DoesNotExist:
-                        pass # Логировать ошибку или пропустить
+                self._create_article_author(instance, author_data)
 
         return instance
+
+    def _create_article_author(self, article, author_data):
+        author_instance = author_data.get('author')
+        if isinstance(author_instance, Author):
+            ArticleAuthor.objects.create(article=article, author=author_instance)
+        elif isinstance(author_instance, int):
+            try:
+                author_obj = Author.objects.get(pk=author_instance)
+                ArticleAuthor.objects.create(article=article, author=author_obj)
+            except Author.DoesNotExist:
+                pass
 
 
 class AnalyzedSegmentSerializer(serializers.ModelSerializer):
@@ -157,22 +232,12 @@ class AnalyzedSegmentSerializer(serializers.ModelSerializer):
         ]
         read_only_fields = ('user', 'created_at', 'updated_at')
         # Делаем article read_only, так как он будет устанавливаться в perform_create или через вложенный URL
-        # или если мы принимаем article_id, то 'article' можно сделать read_only=True
-        # и использовать article_id для записи.
+        # или если мы принимаем article_id, то 'article' можно сделать read_only=True и использовать article_id для записи.
         extra_kwargs = {
             'article': {'read_only': True} # Будем устанавливать в perform_create
         }
 
     def create(self, validated_data):
-        # user устанавливается во ViewSet.perform_create
-        # article также должен быть установлен во ViewSet.perform_create, если используется вложенный роутинг,
-        # или если article_id передается в validated_data, как мы сделали с source='article'.
-        # Если 'article' (объект) не был добавлен в validated_data сериализатором (из-за article_id),
-        # то его нужно будет добавить перед super().create или в самом super().create.
-        # В нашем случае ArticleSerializer имеет article_id для записи, так что это должно сработать.
-        # Но для AnalyzedSegmentViewSet мы будем передавать article_id в URL или в теле,
-        # и устанавливать article в perform_create во ViewSet.
-
         # Извлекаем cited_references, чтобы правильно их обработать после создания объекта
         cited_references_data = validated_data.pop('cited_references', [])
         segment = AnalyzedSegment.objects.create(**validated_data)
