@@ -6,14 +6,16 @@ from django.views import View
 from rest_framework import permissions, status, viewsets
 from rest_framework.response import Response
 from rest_framework.views import APIView
+from rest_framework.exceptions import PermissionDenied
 
-from .models import AnalyzedSegment, Article, ArticleContent, Author, ReferenceLink
+from .models import AnalyzedSegment, Article, ArticleContent, Author, ReferenceLink, ArticleUser
 from .serializers import (
     AnalyzedSegmentSerializer,
     ArticleContentSerializer,
     ArticleSerializer,
     AuthorSerializer,
     ReferenceLinkSerializer,
+    ArticleUserSerializer,
 )
 from .tasks import analyze_segment_with_llm_task, find_doi_for_reference_task, process_article_pipeline_task
 
@@ -485,3 +487,39 @@ class RunLLMAnalysisForSegmentAPIView(APIView):
             {"message": f"LLM анализ для сегмента ID {segment.id} поставлен в очередь.", "task_id": llm_task.id},
             status=status.HTTP_202_ACCEPTED
         )
+
+
+class IsArticleUserOwner(permissions.BasePermission):
+    """
+    Разрешение: только владелец может изменять или просматривать ArticleUser.
+    """
+    def has_object_permission(self, request, view, obj):
+        return obj.user == request.user or request.user.is_staff
+
+
+class ArticleUserViewSet(viewsets.ModelViewSet):
+    queryset = ArticleUser.objects.all()
+    serializer_class = ArticleUserSerializer
+    permission_classes = [permissions.IsAuthenticated, IsArticleUserOwner]
+    lookup_field = 'article_id'  # искать по article_id, а не id
+
+    def get_queryset(self):
+        # Ограничиваем записи текущим пользователем
+        return ArticleUser.objects.filter(user=self.request.user)
+
+    def get_object(self):
+        queryset = self.get_queryset()
+        article_id = self.kwargs.get('article_id')
+        obj = get_object_or_404(queryset, article_id=article_id)
+        return obj
+
+    def perform_create(self, serializer):
+        serializer.save(user=self.request.user)
+
+    def perform_update(self, serializer):
+        serializer.save()
+
+    def perform_destroy(self, instance):
+        if instance.user != self.request.user and not self.request.user.is_staff:
+            raise PermissionDenied("Вы не можете удалить эту запись.")
+        instance.delete()

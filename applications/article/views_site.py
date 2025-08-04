@@ -1,7 +1,7 @@
 from django.contrib.auth.decorators import login_required
 from django.shortcuts import get_object_or_404, redirect, render
 
-from .models import AnalyzedSegment, Article, ArticleContent, ReferenceLink
+from .models import AnalyzedSegment, Article, ArticleContent, ReferenceLink, ArticleUser
 
 
 @login_required
@@ -15,6 +15,8 @@ def article_detail_page(request, pk):
 
     contents = ArticleContent.objects.filter(article=article).order_by('source_api_name', 'format_type')
 
+    article_user = ArticleUser.objects.filter(article=article, user=request.user).first()
+
     references_made = ReferenceLink.objects.filter(source_article=article).select_related('resolved_article').order_by('id')
 
     analyzed_segments = AnalyzedSegment.objects.filter(
@@ -26,6 +28,7 @@ def article_detail_page(request, pk):
     context = {
         'article': article,
         'contents': contents,
+        'article_user': article_user,
         'references_made': references_made,
         'analyzed_segments': analyzed_segments,
         'user_id': request.user.id,

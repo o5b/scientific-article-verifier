@@ -77,7 +77,7 @@
         display: block;
         margin-top: 5px;
     }
-  
+
     .raw-content-toggle {
         cursor: pointer;
         color: var(--primary-color);
@@ -98,7 +98,7 @@
     }
 
 
- 
+
 
     /* ... стили для редактирования частей статьи ... */
     .section-editor {
@@ -173,7 +173,7 @@
     .actions{
         display: flex;
         gap: 10px;
-        
+
         flex-wrap: wrap;
     }
 
@@ -194,7 +194,7 @@
     /* .add-section-btn:hover { background-color: var(--primary-color); } */
 
     /* стили для анализируемых участков текста */
-  
+
     .segment-section-group {
         padding-top: 10px;
     }
@@ -271,7 +271,7 @@
         rotate: 0deg;
     }
 
- 
+
 </style>
 {% endblock %}
 
@@ -287,13 +287,13 @@
             <g filter="url(#filter0_d_8537_320451)">
                 <path fill-rule="evenodd" clip-rule="evenodd" d="M6.00066 9C6.00066 7.14348 6.73816 5.36301 8.05092 4.05025C9.36367 2.7375 11.1441 2 13.0007 2C14.8572 2 16.6377 2.7375 17.9504 4.05025C19.2632 5.36301 20.0007 7.14348 20.0007 9V12.764L21.8227 16.408C21.9065 16.5757 21.9461 16.7621 21.9377 16.9494C21.9293 17.1368 21.8731 17.3188 21.7745 17.4783C21.6759 17.6379 21.5382 17.7695 21.3744 17.8608C21.2106 17.9521 21.0262 18 20.8387 18H16.8747C16.6522 18.8582 16.1511 19.6183 15.4499 20.1609C14.7488 20.7035 13.8873 20.9979 13.0007 20.9979C12.1141 20.9979 11.2526 20.7035 10.5514 20.1609C9.85023 19.6183 9.3491 18.8582 9.12666 18H5.16266C4.97514 18 4.79072 17.9521 4.62693 17.8608C4.46314 17.7695 4.3254 17.6379 4.22681 17.4783C4.12822 17.3188 4.07204 17.1368 4.06361 16.9494C4.05518 16.7621 4.09479 16.5757 4.17866 16.408L6.00066 12.764V9ZM11.2687 18C11.4442 18.304 11.6967 18.5565 12.0007 18.732C12.3047 18.9075 12.6496 18.9999 13.0007 18.9999C13.3517 18.9999 13.6966 18.9075 14.0006 18.732C14.3046 18.5565 14.5571 18.304 14.7327 18H11.2687ZM13.0007 4C11.6746 4 10.4028 4.52678 9.46513 5.46447C8.52745 6.40215 8.00066 7.67392 8.00066 9V12.764C8.00064 13.0743 7.9284 13.3804 7.78966 13.658L6.61966 16H19.3827L18.2127 13.658C18.0736 13.3805 18.001 13.0744 18.0007 12.764V9C18.0007 7.67392 17.4739 6.40215 16.5362 5.46447C15.5985 4.52678 14.3267 4 13.0007 4Z" fill="black"/>
             </g>
-          
+
         </svg>
         <svg class="toggle-button-opened-svg" width="24" height="24" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
             <path d="M6.4 19L5 17.6L10.6 12L5 6.4L6.4 5L12 10.6L17.6 5L19 6.4L13.4 12L19 17.6L17.6 19L12 13.4L6.4 19Z" fill="black"/>
         </svg>
     </botton>
-    
+
 </div>
 <div class="container">
     <div class="article-page">
@@ -389,11 +389,11 @@
                     {% endif %}
                 </div>
                 <div class="tab-content" id="automatically-linked-text-segments">
-                    
-                    
+
+
                     <h3>Автоматически связанные сегменты текста</h3>
 
-                    
+
                     <div class="scrollable-content">
                         {# === НОВЫЙ БЛОК ДЛЯ ОТОБРАЖЕНИЯ СЕГМЕНТОВ === #}
                         <div class="">
@@ -413,7 +413,6 @@
                             <div style=" border-top: 1px solid;border-color: var(--border-color); margin: 10px 0 0"  ></div>
                         </div>
                         <div class="detail-section analyzed-segments-wrapper">
-                            
                             {% if analyzed_segments %}
                                 {# Группируем сегменты по названию секции #}
                                 {% regroup analyzed_segments by section_key as segments_by_section %}
@@ -445,15 +444,27 @@
                                                                     [{{ ref_link.manual_data_json.jats_ref_id }}]
                                                                 {% endif %}
                                                             </span>
+
                                                             {% if ref_link.resolved_article %}
-                                                                <a href="{% url 'article_detail' ref_link.resolved_article.pk %}" title="{{ ref_link.resolved_article.title }}" 
-                                                                style={% if not ref_link.resolved_article.cleaned_text_for_llm and not ref_link.resolved_article.pdf_text %}color:#d9534f;{% else %}color:#0056b3;{% endif %}
-                                                                >{{ ref_link.resolved_article.title|truncatechars:80 }}</a>
+
+                                                                <a href="{% url 'article_detail' ref_link.resolved_article.pk %}"
+                                                                    title="{{ ref_link.resolved_article.title }}"
+                                                                    style={% for au in ref_link.resolved_article.articleuser_set.all %}
+                                                                                {% if au.user == user and au.cleaned_text_for_llm or ref_link.resolved_article.pdf_text %}"color: #0056b3;"{% else %}"color: #d9534f;"{% endif %}
+                                                                            {% endfor %}>
+                                                                    {{ ref_link.resolved_article.title|truncatechars:80 }}
+                                                                </a>
+
+                                                                {% comment %} <a href="{% url 'article_detail' ref_link.resolved_article.pk %}" title="{{ ref_link.resolved_article.title }}" style={% if not ref_link.resolved_article.cleaned_text_for_llm and not ref_link.resolved_article.pdf_text %}color:#d9534f;{% else %}color:#0056b3;{% endif %}>
+                                                                    {{ ref_link.resolved_article.title|truncatechars:80 }}
+                                                                </a> {% endcomment %}
+
                                                             {% elif ref_link.manual_data_json.title %}
                                                                 {{ ref_link.manual_data_json.title|truncatechars:80 }}
                                                             {% else %}
                                                                 {{ ref_link.raw_reference_text|truncatechars:80 }}
                                                             {% endif %}
+
                                                             {% if ref_link.target_article_doi %}
                                                                 <small> (DOI: {{ ref_link.target_article_doi }})</small>
                                                             {% endif %}
@@ -493,6 +504,7 @@
                         {# === КНОПКА СОЗДАНИЯ СЕГМЕНТА (появляется при выделении текста) === #}
                     <button type="button" class="primary-button" id="createSegmentBtn">Создать сегмент из выделенного</button>
                 </div>
+
                 <div class="tab-content" id="content-of-the-article-by-section">
                     <h3>Содержимое статьи по секциям (редактируемое)</h3>
                     <div class="scrollable-content">
@@ -503,10 +515,10 @@
                                         {{ section_key|capfirst }}
                                         <button type="button" class="edit-section-btn" data-section="{{ section_key }}">Редактировать</button>
                                     </h4>
-                                    <div class="section-display" id="display-{{ section_key }}">{{ article.structured_content|json_script:"initial-structured-content-data" }}</div>
+                                    <div class="section-display" id="display-{{ section_key }}">{{ article_user.structured_content|json_script:"initial-structured-content-data" }}</div>
                                     <div class="section-form" id="form-{{ section_key }}" style="display:none;">
                                         <textarea id="textarea-{{ section_key }}">
-                                            {{ article.structured_content|get_item:section_key|default:"" }}
+                                            {{ article_user.structured_content|get_item:section_key|default:"" }}
                                         </textarea>
                                         <div class="actions">
                                             <button type="button" class="save-section-btn" data-section="{{ section_key }}">Сохранить</button>
@@ -517,24 +529,25 @@
                             {% endfor %}
                         {% endwith %}
 
-                        {% if article.structured_content.full_body_fallback and not article.structured_content.introduction %}
+                        {% if article_user.structured_content.full_body_fallback and not article_user.structured_content.introduction %}
                             {# Показываем fallback, если нет основных секций #}
                             <h4>Основной текст (без явных разделов):</h4>
                             <div class="section-editor">
-                                <p>{{ article.structured_content.full_body_fallback|linebreaksbr }}</p>
+                                <p>{{ article_user.structured_content.full_body_fallback|linebreaksbr }}</p>
                                 {# Здесь тоже можно добавить редактирование #}
                             </div>
                         {% endif %}
                     </div>
                 </div>
-                <div class="tab-content" id="other-sections">
-                        
 
-                        {% if article.structured_content.other_sections %}
+                <div class="tab-content" id="other-sections">
+
+
+                        {% if article_user.structured_content.other_sections %}
                             <h3>Другие секции:</h3>
                             <div class="scrollable-content">
-                            {% for other_sec in article.structured_content.other_sections %}
-                                
+                            {% for other_sec in article_user.structured_content.other_sections %}
+
                                 {# Добавляем ID к обертке секции для легкого удаления из DOM #}
                                 <div class="section-editor" id="custom-section-{{ forloop.counter0 }}">
                                     <h5>{{ other_sec.title|default:"Без заголовка" }}</h5>
@@ -558,53 +571,53 @@
                         <button type="button"  id="openAddSectionModalBtn">Добавить свою секцию</button>
                 </div>
                 <div class="tab-content" id="structured-content-of-the-article">
-                    {% if article.structured_content %}
+                    {% if article_user.structured_content %}
 
                             <h3>Структурированное содержимое статьи</h3>
 
                             <div class="scrollable-content" style="padding: 20px 20px 0;">
 
-                                {% if article.structured_content.title %}
-                                    <h4>{{ article.structured_content.title }}</h4>
+                                {% if article_user.structured_content.title %}
+                                    <h4>{{ article_user.structured_content.title }}</h4>
                                 {% endif %}
 
-                                {% if article.structured_content.abstract %}
+                                {% if article_user.structured_content.abstract %}
                                     <div class="content-section">
                                         <h5>Abstract (Аннотация)</h5>
-                                        <p>{{ article.structured_content.abstract|linebreaksbr }}</p>
+                                        <p>{{ article_user.structured_content.abstract|linebreaksbr }}</p>
                                     </div>
                                 {% endif %}
 
-                                {% if article.structured_content.introduction %}
+                                {% if article_user.structured_content.introduction %}
                                     <div class="content-section">
                                         <h5>Introduction (Введение)</h5>
-                                        <p>{{ article.structured_content.introduction|linebreaksbr }}</p>
+                                        <p>{{ article_user.structured_content.introduction|linebreaksbr }}</p>
                                     </div>
                                 {% endif %}
 
-                                {% if article.structured_content.methods %}
+                                {% if article_user.structured_content.methods %}
                                     <div class="content-section">
                                         <h5>Methods (Методы)</h5>
-                                        <p>{{ article.structured_content.methods|linebreaksbr }}</p>
+                                        <p>{{ article_user.structured_content.methods|linebreaksbr }}</p>
                                     </div>
                                 {% endif %}
 
-                                {% if article.structured_content.results %}
+                                {% if article_user.structured_content.results %}
                                     <div class="content-section">
                                         <h5>Results (Результаты)</h5>
-                                        <p>{{ article.structured_content.results|linebreaksbr }}</p>
+                                        <p>{{ article_user.structured_content.results|linebreaksbr }}</p>
                                     </div>
                                 {% endif %}
 
-                                {% if article.structured_content.discussion %}
+                                {% if article_user.structured_content.discussion %}
                                     <div class="content-section">
                                         <h5>Discussion (Обсуждение)</h5>
-                                        <p>{{ article.structured_content.discussion|linebreaksbr }}</p>
+                                        <p>{{ article_user.structured_content.discussion|linebreaksbr }}</p>
                                     </div>
                                 {% endif %}
 
-                                {% if article.structured_content.other_sections %}
-                                    {% for sec in article.structured_content.other_sections %}
+                                {% if article_user.structured_content.other_sections %}
+                                    {% for sec in article_user.structured_content.other_sections %}
                                         <div class="content-section">
                                             <h5>{{ sec.title|default:"Дополнительная секция" }}</h5>
                                             <p>{{ sec.text|linebreaksbr }}</p>
@@ -612,17 +625,17 @@
                                     {% endfor %}
                                 {% endif %}
 
-                                {% if article.structured_content.conclusion %}
+                                {% if article_user.structured_content.conclusion %}
                                     <div class="content-section">
                                         <h5>Conclusion (Заключение)</h5>
-                                        <p>{{ article.structured_content.conclusion|linebreaksbr }}</p>
+                                        <p>{{ article_user.structured_content.conclusion|linebreaksbr }}</p>
                                     </div>
                                 {% endif %}
 
-                                {% if not article.structured_content.introduction and not article.structured_content.methods and article.structured_content.full_body_fallback %}
+                                {% if not article_user.structured_content.introduction and not article_user.structured_content.methods and article_user.structured_content.full_body_fallback %}
                                     <div class="content-section">
                                         <h5>Основной текст (без разделов)</h5>
-                                        <p>{{ article.structured_content.full_body_fallback|linebreaksbr }}</p>
+                                        <p>{{ article_user.structured_content.full_body_fallback|linebreaksbr }}</p>
                                     </div>
                                 {% endif %}
                             </div>
@@ -630,11 +643,11 @@
                     {% endif %}
                 </div>
                 <div class="tab-content" id="clear-text-for-llm">
-                    {% if article.cleaned_text_for_llm %}
+                    {% if article_user.cleaned_text_for_llm %}
 
                             <h3>Очищенный текст (для LLM)</h3>
                             <div class="scrollable-content">
-                                {{ article.cleaned_text_for_llm|linebreaksbr }}
+                                {{ article_user.cleaned_text_for_llm|linebreaksbr }}
                             </div>
 
                     {% endif %}
@@ -716,96 +729,7 @@
                             </div>
                     {% endif %}
                 </div>
-
             </div>
-
-            
-
-            
-
-            
-
-            {% comment %} {% if article.abstract %}
-            <div class="detail-section abstract">
-                <h3>Аннотация</h3>
-                <p>{{ article.abstract|linebreaksbr }}</p>
-            </div>
-            {% endif %} {% endcomment %}
-
-            {% comment %} {% if article.structured_content %}
-                <div class="detail-section structured-text">
-                    <h3>Структурированное содержимое статьи</h3>
-                    {% if article.structured_content.title %}
-                        <h4>{{ article.structured_content.title }}</h4>
-                    {% endif %}
-
-                    {% if article.structured_content.abstract %}
-                        <div class="content-section">
-                            <h5>Abstract (Аннотация)</h5>
-                            <p>{{ article.structured_content.abstract|linebreaksbr }}</p>
-                        </div>
-                    {% endif %}
-
-                    {% if article.structured_content.introduction %}
-                        <div class="content-section">
-                            <h5>Introduction (Введение)</h5>
-                            <p>{{ article.structured_content.introduction|linebreaksbr }}</p>
-                        </div>
-                    {% endif %}
-
-                    {% if article.structured_content.methods %}
-                        <div class="content-section">
-                            <h5>Methods (Методы)</h5>
-                            <p>{{ article.structured_content.methods|linebreaksbr }}</p>
-                        </div>
-                    {% endif %}
-
-                    {% if article.structured_content.results %}
-                        <div class="content-section">
-                            <h5>Results (Результаты)</h5>
-                            <p>{{ article.structured_content.results|linebreaksbr }}</p>
-                        </div>
-                    {% endif %}
-
-                    {% if article.structured_content.discussion %}
-                        <div class="content-section">
-                            <h5>Discussion (Обсуждение)</h5>
-                            <p>{{ article.structured_content.discussion|linebreaksbr }}</p>
-                        </div>
-                    {% endif %}
-
-                    {% if article.structured_content.other_sections %}
-                        {% for sec in article.structured_content.other_sections %}
-                            <div class="content-section">
-                                <h5>{{ sec.title|default:"Дополнительная секция" }}</h5>
-                                <p>{{ sec.text|linebreaksbr }}</p>
-                            </div>
-                        {% endfor %}
-                    {% endif %}
-
-                    {% if article.structured_content.conclusion %}
-                        <div class="content-section">
-                            <h5>Conclusion (Заключение)</h5>
-                            <p>{{ article.structured_content.conclusion|linebreaksbr }}</p>
-                        </div>
-                    {% endif %}
-
-                    {% if not article.structured_content.introduction and not article.structured_content.methods and article.structured_content.full_body_fallback %}
-                        <div class="content-section">
-                            <h5>Основной текст (без разделов)</h5>
-                            <p>{{ article.structured_content.full_body_fallback|linebreaksbr }}</p>
-                        </div>
-                    {% endif %}
-                </div>
-            {% endif %} {% endcomment %}
-
-            
-
-
-
-            
-
-            
         </div>
     </div>
 </div>
@@ -821,7 +745,7 @@
                     <path d="M6.4 19L5 17.6L10.6 12L5 6.4L6.4 5L12 10.6L17.6 5L19 6.4L13.4 12L19 17.6L17.6 19L12 13.4L6.4 19Z" fill="black"></path>
                 </svg>
             </button>
-            
+
         </div>
         <form id="addReferenceForm">
             <p>
@@ -1734,9 +1658,16 @@ document.addEventListener('DOMContentLoaded', function() {
 
             button.disabled = true;
             button.textContent = 'Сохранение...';
-            addNotificationToDetail({ payload: { status: 'INFO', message: `Сохранение секции "${sectionKey}"...`, identifier: `ArticleID:${articleId}` } });
+            addNotificationToDetail({
+                payload: {
+                    status: 'INFO',
+                    message: `Сохранение секции "${sectionKey}"...`,
+                    identifier: `ArticleID:${articleId}`
+                }
+            });
 
-            fetch(`/api/articles/articles/${articleId}/`, {
+            // fetch(`/api/articles/articles/${articleId}/`, {
+            fetch(`/api/articles/articleuser/${articleId}/`, {
                 method: 'PATCH',
                 headers: {
                     'X-CSRFToken': getCSRFToken(),

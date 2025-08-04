@@ -483,7 +483,7 @@ def process_data_task(
                                 author_list.append(new_author)
 
                     if current_api_name == settings.API_SOURCE_NAMES['CROSSREF']:
-                        print("*** DEBUG (process_data_task) if current_api_name == settings.API_SOURCE_NAMES['CROSSREF']:")
+                        # print("*** DEBUG (process_data_task) if current_api_name == settings.API_SOURCE_NAMES['CROSSREF']:")
                         ArticleContent.objects.update_or_create(
                             article=article,
                             source_api_name=current_api_name,
@@ -492,12 +492,12 @@ def process_data_task(
                         )
 
                     elif current_api_name == settings.API_SOURCE_NAMES['PUBMED']:
-                        print("*** DEBUG (process_data_task) elif current_api_name == settings.API_SOURCE_NAMES['PUBMED']:")
+                        # print("*** DEBUG (process_data_task) elif current_api_name == settings.API_SOURCE_NAMES['PUBMED']:")
                         if article_data.get('article_contents'):
                             article_contents = article_data.get('article_contents')
-                            # print(f'********* article_contents: {article_contents}')
+
                             for key, val in article_contents.items():
-                                print(f'*** DEBUG (process_data_task) key: {key}')
+                                # print(f'*** DEBUG (process_data_task) key: {key}')
                                 if key and val:
                                     ArticleContent.objects.update_or_create(
                                         article=article,
@@ -516,12 +516,12 @@ def process_data_task(
                                             }
 
                     elif current_api_name == settings.API_SOURCE_NAMES['EUROPEPMC']:
-                        print("*** DEBUG (process_data_task) elif current_api_name == settings.API_SOURCE_NAMES['EUROPEPMC']:")
+                        # print("*** DEBUG (process_data_task) elif current_api_name == settings.API_SOURCE_NAMES['EUROPEPMC']:")
                         if article_data.get('article_contents'):
                             article_contents = article_data.get('article_contents')
                             # print(f'********* article_contents: {article_contents}')
                             for key, val in article_contents.items():
-                                print(f'*** DEBUG (process_data_task) EUROPEPMC key: {key}')
+                                # print(f'*** DEBUG (process_data_task) EUROPEPMC key: {key}')
                                 if key and val:
                                     ArticleContent.objects.update_or_create(
                                         article=article,
@@ -540,12 +540,12 @@ def process_data_task(
                                             }
 
                     elif current_api_name == settings.API_SOURCE_NAMES['RXIV']:
-                        print("*** DEBUG (process_data_task) elif current_api_name == settings.API_SOURCE_NAMES['RXIV']:")
+                        # print("*** DEBUG (process_data_task) elif current_api_name == settings.API_SOURCE_NAMES['RXIV']:")
                         if article_data.get('article_contents'):
                             article_contents = article_data.get('article_contents')
 
                             for key, val in article_contents.items():
-                                print(f'*** DEBUG (process_data_task) key: {key}')
+                                # print(f'*** DEBUG (process_data_task) key: {key}')
                                 if key and val:
                                     ArticleContent.objects.update_or_create(
                                         article=article,
@@ -579,14 +579,22 @@ def process_data_task(
         pdf_file_name = None
         pdf_to_save = None
         pdf_url = None
+        # article_user_obj = None
 
         if full_text['full_text_xml']:
             current_api_name = full_text['primary_source_api']
             structured_data = extract_structured_text_from_jats(full_text['full_text_xml'])
             if structured_data:
-                article.structured_content = structured_data
-                article.regenerate_cleaned_text_from_structured() # Вызываем метод модели для обновления cleaned_text_for_llm
+                # article.structured_content = structured_data
+                # article.regenerate_cleaned_text_from_structured() # Вызываем метод модели для обновления cleaned_text_for_llm
                 article.primary_source_api = current_api_name
+
+                article_user_obj, created_article_user_obj = ArticleUser.objects.get_or_create(article=article, user=article_owner)
+                # print(f'******* article_user_obj: {article_user_obj} \ncreated_article_user_obj: {created_article_user_obj}')
+                article_user_obj.structured_content = structured_data
+                article_user_obj.regenerate_cleaned_text_from_structured() # для обновления cleaned_text_for_llm
+                article_user_obj.primary_source_api = current_api_name
+                article_user_obj.save()
 
             # --- Парсинг и сохранение ссылок из полного текста ---
             process_references_flag = (originating_reference_link_id is None)
@@ -711,7 +719,7 @@ def process_data_task(
                                     'rows': 1, # Нам нужен только самый релевантный результат
                                     'mailto': APP_EMAIL
                                 }
-                                print(f'######### params: {params}')
+                                # print(f'######### params: {params}')
                                 api_url = "https://api.crossref.org/works"
                                 # headers = {'User-Agent': f'ScientificPapersApp/1.0 (mailto:{APP_EMAIL})'}
                                 headers = {'User-Agent': USER_AGENT_LIST[0]}
@@ -733,7 +741,7 @@ def process_data_task(
                                     # response.raise_for_status()
                                     if response and response.status_code == 200:
                                         ref_json_data = response.json()
-                                        print(f'######## ref_json_data: {ref_json_data}')
+                                        # print(f'######## ref_json_data: {ref_json_data}')
                                 except requests.exceptions.RequestException as exc:
                                     send_user_notification(
                                         user_id,
@@ -751,7 +759,7 @@ def process_data_task(
                                     score = found_item.get('score', 0) # CrossRef возвращает score релевантности
 
                                     if found_doi:
-                                        print(f'########### found_doi: {found_doi}')
+                                        # print(f'########### found_doi: {found_doi}')
                                         ref_doi_jats = found_doi
                                         # Можно добавить проверку score, чтобы отсеять совсем нерелевантные результаты
                                         # Например, if score > некоторого порога (например 60-70)
@@ -804,7 +812,7 @@ def process_data_task(
 
                         # Если у ссылки есть DOI, ставим в очередь на обработку
                         if ref_doi_jats:
-                            print(f"*** DEBUG (process_data_task) {current_api_name} ref_doi_jats: {ref_doi_jats}")
+                            # print(f"*** DEBUG (process_data_task) {current_api_name} ref_doi_jats: {ref_doi_jats}")
                             send_user_notification(
                                 user_id,
                                 task_id,
@@ -847,7 +855,7 @@ def process_data_task(
                 simple_pdf_url = f'https://pmc.ncbi.nlm.nih.gov/articles/{article.pmc_id}/pdf/'
                 pdf_to_save, pdf_url = download_pdf_from_pmc(simple_pdf_url)
                 if pdf_to_save:
-                    print('*** DEBUG (process_data_task) if pdf_to_save:')
+                    # print('*** DEBUG (process_data_task) if pdf_to_save:')
                     # print(pdf_to_save)
                     current_api_name = settings.API_SOURCE_NAMES['PUBMED']
                     send_user_notification(
@@ -987,7 +995,9 @@ def process_data_task(
                                 source_api=current_api_name
                             )
                             article.pdf_text = extracted_markitdown_text
-                            if not article.structured_content:
+                            # if not article.structured_content:
+                            #     article.primary_source_api = current_api_name
+                            if not article_user_obj.structured_content:
                                 article.primary_source_api = current_api_name
                         else:
                             send_user_notification(
@@ -1032,7 +1042,7 @@ def process_data_task(
             originating_reference_link_id=originating_reference_link_id
         )
 
-        print(f'*** DEBUG (process_data_task) author_list: {author_list}')
+        # print(f'*** DEBUG (process_data_task) author_list: {author_list}')
         if author_list:
             for author in author_list:
                 author_obj = None
@@ -1047,15 +1057,15 @@ def process_data_task(
                                 'affiliation': author['affiliations'],
                             }
                         )
-                        print(f'********* author_created: {author_created}, author_obj: {author_obj}')
+                        # print(f'********* author_created: {author_created}, author_obj: {author_obj}')
                         if author_obj:
                             if author['last_name'] and (article.doi or article.pubmed_id):
                                 find_orcid_result = find_orcid(author['last_name'], article.doi, article.pubmed_id)
                                 author_orcid = find_orcid_result.get('orcid_id')
-                                print(f'********** ORCID ID: {author_orcid}')
+                                # print(f'********** ORCID ID: {author_orcid}')
                                 if author_orcid:
                                     if not Author.objects.filter(orcid=author_orcid):
-                                        print('**** author orcid not exist')
+                                        # print('**** author orcid not exist')
                                         if not author_obj.orcid:
                                             author_obj.orcid = author_orcid
                                             author_obj.save()
@@ -1103,7 +1113,7 @@ def process_data_task(
 
         # Если был получен полный текст, запускаем задачу для его анализа и связывания
         if article.is_user_initiated and (full_text_xml_pmc or full_text_xml_rxvi or full_text_xml_europepmc):
-            print('*** DEBUG (process_data_task) if article.is_user_initiated and (full_text_xml_pmc or full_text_xml_rxvi or full_text_xml_europepmc):')
+            # print('*** DEBUG (process_data_task) if article.is_user_initiated and (full_text_xml_pmc or full_text_xml_rxvi or full_text_xml_europepmc):')
             send_user_notification(
                 user_id,
                 task_id,
@@ -1172,11 +1182,11 @@ def fetch_data_from_crossref_task(
             'pubmed_id': None,
             'pmc_id': None,
             'arxiv_id': None,
-            'cleaned_text_for_llm': None,
-            'is_manually_added_full_text': False,
+            # 'cleaned_text_for_llm': None,
+            # 'is_manually_added_full_text': False,
             'pdf_file': None,
             'pdf_text': None,
-            'pdf_file_name': None, # если будет надо имя для pdf
+            'pdf_file_name': None,
             'primary_source_api': None,
             'publication_date': None,
             'journal_name': None,
@@ -1185,7 +1195,7 @@ def fetch_data_from_crossref_task(
             'best_oa_pdf_url': None,
             'oa_license': None,
             'is_user_initiated': False,
-            'structured_content': {},
+            # 'structured_content': {},
             # models.ArticleContent
             'current_api_name': None,
             'article_content_format_type': None,
@@ -1415,7 +1425,7 @@ def fetch_data_from_pubmed_task(
             'best_oa_pdf_url': None,
             'oa_license': None,
             'is_user_initiated': False,
-            'structured_content': {},
+            # 'structured_content': {},
             # models.ArticleContent
             'current_api_name': None,
             # 'article_content_format_type': None,
@@ -3024,16 +3034,29 @@ def analyze_segment_with_llm_task(self, analyzed_segment_id: int, user_id: int):
         ref_title = ''
         # ref_abstract = "N/A"
         ref_text = ''
+        articleuser = None
         if 'jats_ref_id' in ref_link.manual_data_json and ref_link.manual_data_json['jats_ref_id']:
             ref_id = ref_link.manual_data_json["jats_ref_id"]
         if ref_link.resolved_article:
             ref_title = ref_link.resolved_article.title
-            if ref_link.resolved_article.cleaned_text_for_llm:
-                ref_text = ref_link.resolved_article.cleaned_text_for_llm
-            elif ref_link.resolved_article.pdf_text:
-                ref_text = ref_link.resolved_article.pdf_text
-            elif ref_link.resolved_article.abstract:
-                ref_text = ref_link.resolved_article.abstract
+
+            # if ref_link.resolved_article.cleaned_text_for_llm:
+            #     ref_text = ref_link.resolved_article.cleaned_text_for_llm
+            # elif ref_link.resolved_article.pdf_text:
+            #     ref_text = ref_link.resolved_article.pdf_text
+            # elif ref_link.resolved_article.abstract:
+            #     ref_text = ref_link.resolved_article.abstract
+
+            articleuser = ref_link.resolved_article.articleuser_set.filter(user_id=user_id).first()
+            if articleuser and articleuser.cleaned_text_for_llm:
+                ref_text = articleuser.cleaned_text_for_llm
+
+            if not ref_text:
+                if ref_link.resolved_article.pdf_text:
+                    ref_text = ref_link.resolved_article.pdf_text
+                elif ref_link.resolved_article.abstract:
+                    ref_text = ref_link.resolved_article.abstract
+
             cited_references[ref_id] = {'title': ref_title, 'text': ref_text}
 
     if cited_references:
@@ -3129,7 +3152,7 @@ def analyze_segment_with_llm_task(self, analyzed_segment_id: int, user_id: int):
                     }
 
         elif getattr(settings, 'LLM_PROVIDER_FOR_ANALYSIS', None) == "Grok":
-            raw_llm_output = send_prompt_to_grok(prompt) # Запрос к Grok
+            raw_llm_output = send_prompt_to_grok(prompt)
             print(f"***** Grok raw_llm_output: {raw_llm_output}") # Для отладки
 
             try:

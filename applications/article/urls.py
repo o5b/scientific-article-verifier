@@ -14,6 +14,7 @@ from .views import (
     ReprocessArticleAPIView,
     RunLLMAnalysisForSegmentAPIView,
     StartArticleProcessingView,
+    ArticleUserViewSet,
 )
 
 
@@ -24,6 +25,7 @@ router.register(r'articles', ArticleViewSet, basename='article')
 router.register(r'articlecontents', ArticleContentViewSet, basename='articlecontent')
 router.register(r'referencelinks', ReferenceLinkViewSet, basename='referencelink')
 router.register(r'analyzed-segments', AnalyzedSegmentViewSet, basename='analyzedsegment')
+router.register(r'articleuser', ArticleUserViewSet, basename='articleuser')
 
 
 # API URLs теперь автоматически определяются роутером.

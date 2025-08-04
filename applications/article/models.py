@@ -144,19 +144,19 @@ class Article(models.Model):
         blank=True
     )
 
-    # --- Данные для LLM и ручного ввода ---
-    cleaned_text_for_llm = models.TextField(
-        verbose_name=_("Очищенный текст для LLM"),
-        null=True,
-        blank=True,
-        help_text=_("Полный текст статьи, очищенный и подготовленный для анализа LLM. Может быть добавлен вручную.")
-    )
+    # # --- Данные для LLM и ручного ввода ---
+    # cleaned_text_for_llm = models.TextField(
+    #     verbose_name=_("Очищенный текст для LLM"),
+    #     null=True,
+    #     blank=True,
+    #     help_text=_("Полный текст статьи, очищенный и подготовленный для анализа LLM. Может быть добавлен вручную.")
+    # )
 
-    is_manually_added_full_text = models.BooleanField(
-        verbose_name=_("Полный текст добавлен вручную"),
-        default=False,
-        help_text=_("Указывает, был ли полный текст статьи добавлен пользователем вручную.")
-    )
+    # is_manually_added_full_text = models.BooleanField(
+    #     verbose_name=_("Полный текст добавлен вручную"),
+    #     default=False,
+    #     help_text=_("Указывает, был ли полный текст статьи добавлен пользователем вручную.")
+    # )
 
     pdf_file = models.FileField(
         upload_to='articles_pdf/',
@@ -245,13 +245,13 @@ class Article(models.Model):
         help_text=_("True, если эта статья была добавлена пользователем напрямую, а не как связанная ссылка.")
     )
 
-    structured_content = models.JSONField(
-        verbose_name=_("Структурированное содержимое"),
-        null=True,
-        blank=True,
-        default=dict, # default=dict, чтобы можно было сразу добавлять ключи
-        help_text=_("Содержимое статьи, разбитое по секциям (например, abstract, introduction, methods, results, discussion, conclusion)")
-    )
+    # structured_content = models.JSONField(
+    #     verbose_name=_("Структурированное содержимое"),
+    #     null=True,
+    #     blank=True,
+    #     default=dict, # default=dict, чтобы можно было сразу добавлять ключи
+    #     help_text=_("Содержимое статьи, разбитое по секциям (например, abstract, introduction, methods, results, discussion, conclusion)")
+    # )
 
     # --- Временные метки ---
     created_at = models.DateTimeField(
@@ -269,86 +269,86 @@ class Article(models.Model):
         verbose_name_plural = _("Научные статьи")
         ordering = ['-updated_at', '-created_at']
 
-    def regenerate_cleaned_text_from_structured(self):
-        """
-        Формирует cleaned_text_for_llm из structured_content.
-        Секции добавляются в предопределенном порядке.
-        """
-        if not self.structured_content or not isinstance(self.structured_content, dict):
-            # Если нет структурированного контента оставляем пустым
-            # self.cleaned_text_for_llm = self.abstract if self.abstract else ""
-            return None
+    # def regenerate_cleaned_text_from_structured(self):
+    #     """
+    #     Формирует cleaned_text_for_llm из structured_content.
+    #     Секции добавляются в предопределенном порядке.
+    #     """
+    #     if not self.structured_content or not isinstance(self.structured_content, dict):
+    #         # Если нет структурированного контента оставляем пустым
+    #         # self.cleaned_text_for_llm = self.abstract if self.abstract else ""
+    #         return None
 
-        # Если только 'title' и/или 'abstract' то не продолжаем
-        structured_content_keys = list(self.structured_content.keys())
-        for key in ['title', 'abstract']:
-            if key in structured_content_keys:
-                structured_content_keys.remove(key)
-        if not structured_content_keys:
-            return None
+    #     # Если только 'title' и/или 'abstract' то не продолжаем
+    #     structured_content_keys = list(self.structured_content.keys())
+    #     for key in ['title', 'abstract']:
+    #         if key in structured_content_keys:
+    #             structured_content_keys.remove(key)
+    #     if not structured_content_keys:
+    #         return None
 
-        ordered_keys = ['title', 'abstract', 'introduction', 'methods', 'results', 'discussion', 'conclusion']
-        text_parts = []
-        processed_keys = set()
+    #     ordered_keys = ['title', 'abstract', 'introduction', 'methods', 'results', 'discussion', 'conclusion']
+    #     text_parts = []
+    #     processed_keys = set()
 
-        for key in ordered_keys:
-            if self.structured_content.get(key):
-                section_text = str(self.structured_content[key])
-                if key == 'title':
-                    title_marker = f"--- {key.upper()} ---"
-                else:
-                    title_marker = f"\n--- {key.upper()} ---"
-                # Убираем дублирование заголовка, если он уже есть в тексте секции
-                # if not section_text.strip().upper().startswith(title_marker):
-                #    text_parts.append(title_marker)
-                text_parts.append(title_marker)
-                text_parts.append(section_text)
-                processed_keys.add(key)
+    #     for key in ordered_keys:
+    #         if self.structured_content.get(key):
+    #             section_text = str(self.structured_content[key])
+    #             if key == 'title':
+    #                 title_marker = f"--- {key.upper()} ---"
+    #             else:
+    #                 title_marker = f"\n--- {key.upper()} ---"
+    #             # Убираем дублирование заголовка, если он уже есть в тексте секции
+    #             # if not section_text.strip().upper().startswith(title_marker):
+    #             #    text_parts.append(title_marker)
+    #             text_parts.append(title_marker)
+    #             text_parts.append(section_text)
+    #             processed_keys.add(key)
 
-        # Добавляем "other_sections"
-        other_sections_data = self.structured_content.get('other_sections')
-        if isinstance(other_sections_data, list):
-            for sec_item in other_sections_data:
-                if isinstance(sec_item, dict):
-                    title = sec_item.get('title', 'OTHER SECTION').upper()
-                    text = sec_item.get('text', '')
-                    if text:
-                        text_parts.append(f"\n--- {title} ---")
-                        text_parts.append(text)
+    #     # Добавляем "other_sections"
+    #     other_sections_data = self.structured_content.get('other_sections')
+    #     if isinstance(other_sections_data, list):
+    #         for sec_item in other_sections_data:
+    #             if isinstance(sec_item, dict):
+    #                 title = sec_item.get('title', 'OTHER SECTION').upper()
+    #                 text = sec_item.get('text', '')
+    #                 if text:
+    #                     text_parts.append(f"\n--- {title} ---")
+    #                     text_parts.append(text)
 
-        # Добавляем любые другие ключи из structured_content, которые не были обработаны
-        # (кроме 'full_body_fallback', который мы используем ниже, если ничего другого нет)
-        for key, value in self.structured_content.items():
-            if key not in processed_keys and key not in ['other_sections', 'full_body_fallback'] and value:
-                text_parts.append(f"\n--- {key.upper()} (CUSTOM) ---")
-                text_parts.append(str(value))
-                processed_keys.add(key)
+    #     # Добавляем любые другие ключи из structured_content, которые не были обработаны
+    #     # (кроме 'full_body_fallback', который мы используем ниже, если ничего другого нет)
+    #     for key, value in self.structured_content.items():
+    #         if key not in processed_keys and key not in ['other_sections', 'full_body_fallback'] and value:
+    #             text_parts.append(f"\n--- {key.upper()} (CUSTOM) ---")
+    #             text_parts.append(str(value))
+    #             processed_keys.add(key)
 
-        # if not text_parts and self.structured_content.get('full_body_fallback'):
-        #     text_parts.append(self.structured_content['full_body_fallback'])
+    #     # if not text_parts and self.structured_content.get('full_body_fallback'):
+    #     #     text_parts.append(self.structured_content['full_body_fallback'])
 
-        self.cleaned_text_for_llm = "\n\n".join(filter(None, [tp.strip() for tp in text_parts])).strip()
-        # if not self.cleaned_text_for_llm and self.abstract: # Если после всего текста нет, а абстракт есть
-            # self.cleaned_text_for_llm = self.abstract
+    #     self.cleaned_text_for_llm = "\n\n".join(filter(None, [tp.strip() for tp in text_parts])).strip()
+    #     # if not self.cleaned_text_for_llm and self.abstract: # Если после всего текста нет, а абстракт есть
+    #         # self.cleaned_text_for_llm = self.abstract
 
-    def save(self, *args, **kwargs):
-        # Автоматически регенерируем cleaned_text_for_llm, если structured_content изменился
-        # или если cleaned_text_for_llm пуст, а structured_content есть.
-        # Это можно сделать более избирательно, если отслеживать изменения structured_content.
-        # Для простоты, пока будем делать это при каждом save, если structured_content есть.
-        if self.structured_content:
-            # Проверяем, изменилось ли structured_content (если объект уже в БД)
-            if self.pk:
-                try:
-                    old_version = Article.objects.get(pk=self.pk)
-                    if old_version.structured_content != self.structured_content or \
-                        (not self.cleaned_text_for_llm and self.structured_content):
-                            self.regenerate_cleaned_text_from_structured()
-                except Article.DoesNotExist:
-                    self.regenerate_cleaned_text_from_structured() # Для нового объекта
-            else: # Новый объект
-                self.regenerate_cleaned_text_from_structured()
-        super().save(*args, **kwargs)
+    # def save(self, *args, **kwargs):
+    #     # Автоматически регенерируем cleaned_text_for_llm, если structured_content изменился
+    #     # или если cleaned_text_for_llm пуст, а structured_content есть.
+    #     # Это можно сделать более избирательно, если отслеживать изменения structured_content.
+    #     # Для простоты, пока будем делать это при каждом save, если structured_content есть.
+    #     if self.structured_content:
+    #         # Проверяем, изменилось ли structured_content (если объект уже в БД)
+    #         if self.pk:
+    #             try:
+    #                 old_version = Article.objects.get(pk=self.pk)
+    #                 if old_version.structured_content != self.structured_content or \
+    #                     (not self.cleaned_text_for_llm and self.structured_content):
+    #                         self.regenerate_cleaned_text_from_structured()
+    #             except Article.DoesNotExist:
+    #                 self.regenerate_cleaned_text_from_structured() # Для нового объекта
+    #         else: # Новый объект
+    #             self.regenerate_cleaned_text_from_structured()
+    #     super().save(*args, **kwargs)
 
     def __str__(self):
         return self.title[:100] # Возвращаем первые 100 символов названия
@@ -389,8 +389,8 @@ class ArticleAuthor(models.Model):
     # )
 
     class Meta:
-        verbose_name = _("Автора статьи")
-        verbose_name_plural = _("Авторы статей")
+        verbose_name = _("Автор связанный со статьёй")
+        verbose_name_plural = _("Авторы связанные со статьями")
         # ordering = ['order']
         unique_together = ('article', 'author') # Автор не может быть дважды в одной статье
         # constraints = [
@@ -494,7 +494,7 @@ class ReferenceLink(models.Model):
 
     status = models.CharField(
         verbose_name=_("Статус ссылки"),
-        max_length=50, # Убедитесь, что длина достаточна для новых значений
+        max_length=50,
         choices=StatusChoices.choices,
         default=StatusChoices.PENDING_DOI_INPUT
     )
@@ -643,6 +643,37 @@ class ArticleUser(models.Model):
         on_delete=models.CASCADE
     )
 
+    structured_content = models.JSONField(
+        verbose_name=_("Структурированное содержимое"),
+        null=True,
+        blank=True,
+        default=dict, # default=dict, чтобы можно было сразу добавлять ключи
+        help_text=_("Содержимое статьи, разбитое по секциям (например, abstract, introduction, methods, results, discussion, conclusion)")
+    )
+
+    # --- Данные для LLM и ручного ввода ---
+    cleaned_text_for_llm = models.TextField(
+        verbose_name=_("Очищенный текст для LLM"),
+        null=True,
+        blank=True,
+        help_text=_("Полный текст статьи, очищенный и подготовленный для анализа LLM. Может быть добавлен вручную.")
+    )
+
+    # --- Источник основной записи ---
+    primary_source_api = models.CharField(
+        verbose_name=_("API основного источника"),
+        max_length=100,
+        null=True,
+        blank=True,
+        help_text=_("API, из которого были взяты основные метаданные для этой записи (title, abstract).")
+    )
+
+    is_manually_added_full_text = models.BooleanField(
+        verbose_name=_("Полный текст добавлен вручную"),
+        default=False,
+        help_text=_("Указывает, был ли полный текст статьи добавлен пользователем вручную.")
+    )
+
     created_at = models.DateTimeField(
         verbose_name=_("Дата создания"),
         auto_now_add=True
@@ -659,10 +690,94 @@ class ArticleUser(models.Model):
     # )
 
     class Meta:
-        verbose_name = _("Пользователь статьи")
-        verbose_name_plural = _("Пользователи статей")
+        verbose_name = _("Статья связанная с пользователем")
+        verbose_name_plural = _("Статьи связанные с пользователями")
         # ordering = ['order']
         unique_together = ('article', 'user') # Пользователь не может быть дважды связан со статьёй
         # constraints = [
         #     models.UniqueConstraint(fields=['article'], name='unique_author_per_article')
         # ]
+
+    def regenerate_cleaned_text_from_structured(self):
+        """
+        Формирует cleaned_text_for_llm из structured_content.
+        Секции добавляются в предопределенном порядке.
+        """
+        if not self.structured_content or not isinstance(self.structured_content, dict):
+            # Если нет структурированного контента оставляем пустым
+            # self.cleaned_text_for_llm = self.abstract if self.abstract else ""
+            return None
+
+        # Если только 'title' и/или 'abstract' то не продолжаем
+        structured_content_keys = list(self.structured_content.keys())
+        for key in ['title', 'abstract']:
+            if key in structured_content_keys:
+                structured_content_keys.remove(key)
+        if not structured_content_keys:
+            return None
+
+        ordered_keys = ['title', 'abstract', 'introduction', 'methods', 'results', 'discussion', 'conclusion']
+        text_parts = []
+        processed_keys = set()
+
+        for key in ordered_keys:
+            if self.structured_content.get(key):
+                section_text = str(self.structured_content[key])
+                if key == 'title':
+                    title_marker = f"--- {key.upper()} ---"
+                else:
+                    title_marker = f"\n--- {key.upper()} ---"
+                # Убираем дублирование заголовка, если он уже есть в тексте секции
+                # if not section_text.strip().upper().startswith(title_marker):
+                #    text_parts.append(title_marker)
+                text_parts.append(title_marker)
+                text_parts.append(section_text)
+                processed_keys.add(key)
+
+        # Добавляем "other_sections"
+        other_sections_data = self.structured_content.get('other_sections')
+        if isinstance(other_sections_data, list):
+            for sec_item in other_sections_data:
+                if isinstance(sec_item, dict):
+                    title = sec_item.get('title', 'OTHER SECTION').upper()
+                    text = sec_item.get('text', '')
+                    if text:
+                        text_parts.append(f"\n--- {title} ---")
+                        text_parts.append(text)
+
+        # Добавляем любые другие ключи из structured_content, которые не были обработаны
+        # (кроме 'full_body_fallback', который мы используем ниже, если ничего другого нет)
+        for key, value in self.structured_content.items():
+            if key not in processed_keys and key not in ['other_sections', 'full_body_fallback'] and value:
+                text_parts.append(f"\n--- {key.upper()} (CUSTOM) ---")
+                text_parts.append(str(value))
+                processed_keys.add(key)
+
+        # if not text_parts and self.structured_content.get('full_body_fallback'):
+        #     text_parts.append(self.structured_content['full_body_fallback'])
+
+        self.cleaned_text_for_llm = "\n\n".join(filter(None, [tp.strip() for tp in text_parts])).strip()
+        # if not self.cleaned_text_for_llm and self.abstract: # Если после всего текста нет, а абстракт есть
+            # self.cleaned_text_for_llm = self.abstract
+
+    def save(self, *args, **kwargs):
+        # Автоматически регенерируем cleaned_text_for_llm, если structured_content изменился
+        # или если cleaned_text_for_llm пуст, а structured_content есть.
+        # Это можно сделать более избирательно, если отслеживать изменения structured_content.
+        # Для простоты, пока будем делать это при каждом save, если structured_content есть.
+        if self.structured_content:
+            # Проверяем, изменилось ли structured_content (если объект уже в БД)
+            if self.pk:
+                try:
+                    old_version = ArticleUser.objects.get(pk=self.pk)
+                    if old_version.structured_content != self.structured_content or \
+                        (not self.cleaned_text_for_llm and self.structured_content):
+                            self.regenerate_cleaned_text_from_structured()
+                except ArticleUser.DoesNotExist:
+                    self.regenerate_cleaned_text_from_structured() # Для нового объекта
+            else: # Новый объект
+                self.regenerate_cleaned_text_from_structured()
+        super().save(*args, **kwargs)
+
+    def __str__(self):
+        return f'ArticleUser (article id: {self.article.id}, user id: {self.user.id})'

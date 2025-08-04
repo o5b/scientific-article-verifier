@@ -14,7 +14,7 @@ import requests
 from asgiref.sync import async_to_sync, sync_to_async
 from channels.layers import get_channel_layer
 
-# from django.conf import settings
+from django.conf import settings
 from django.utils import timezone
 
 # from datetime import datetime, timedelta
@@ -134,7 +134,7 @@ def parse_pubmed_authors_from_xml_metadata(author_list_node):
             #     author = Author.objects.create(full_name=full_name, first_name=first_name, last_name=last_name)
             # # parsed_authors.append(author)
             # parsed_authors.append({'author_obj': author})
-    print(f'*** DEBUG (parse_pubmed_authors_from_xml_metadata) parsed_authors: {parsed_authors}')
+    # print(f'*** DEBUG (parse_pubmed_authors_from_xml_metadata) parsed_authors: {parsed_authors}')
     return parsed_authors
 
 
@@ -530,7 +530,7 @@ def download_pdf_from_pmc(pdf_url: str):
                 page.on("response", get_download_url)
                 page.goto(pdf_url, wait_until='domcontentloaded') # 'load'
 
-                print(f'*** DEBUG (download_pdf_from_pmc) download_url : {download_url}')
+                # print(f'*** DEBUG (download_pdf_from_pmc) download_url : {download_url}')
                 resp = None
                 if download_url:
                     # resp = page.request.get(pdf_url)
@@ -539,7 +539,7 @@ def download_pdf_from_pmc(pdf_url: str):
                 if resp and resp.status == 200:
                     if 'content-type' in resp.headers and 'application/pdf' in resp.headers['content-type']:
                         file_content = resp.body()
-                        print(f'***** (download_pdf) pdf_url: {pdf_url}, \ndownload_url: {download_url}, \nheaders: {resp.headers}, \ncontent-type: {resp.headers['content-type']}, \nfile_content: {file_content[:1000]}')
+                        # print(f'***** (download_pdf) pdf_url: {pdf_url}, \ndownload_url: {download_url}, \nheaders: {resp.headers}, \ncontent-type: {resp.headers['content-type']}, \nfile_content: {file_content[:1000]}')
                 else:
                     print(f"*** DEBUG (download_pdf_from_pmc) *resp.status not 200* Download PDF from URL: {pdf_url}. Response: {resp}")
 
@@ -759,14 +759,14 @@ def send_prompt_to_grok(prompt: str) -> str | None:
     with sync_playwright() as playwright:
         with playwright.chromium.launch(
             channel='chrome',
-            headless=True,
+            # headless=True,
+            headless=getattr(settings, 'GROK_HEADLESS_FOR_ANALYSIS', True),
             args=[
                 '--disable-blink-features=AutomationControlled',
             ]
         ) as browser:
             context: BrowserContext = browser.new_context()
             page: Page = context.new_page()
-            #prompt = "Hello! What is the capital of France?"
 
             try:
                 # Navigate to Grok chat page and wait for it to load
@@ -849,7 +849,7 @@ def find_orcid(last_name: str, doi: str | None = None, pmid: str | None = None) 
         # Выполняем поиск по фамилии и doi
         if doi:
             search_url = f"{base_url}/search/?q=family-name:{last_name.strip()}+AND+doi-self:{doi.strip()}"
-            print(f'1 search_url: {search_url}')
+            # print(f'1 search_url: {search_url}')
 
             time.sleep(2)
             response = requests.get(search_url, headers=headers)
@@ -858,15 +858,15 @@ def find_orcid(last_name: str, doi: str | None = None, pmid: str | None = None) 
 
             if data:
                 num_found = data.get('num-found', 0)
-                print(f'1 Найдено результатов: {num_found}')
+                # print(f'1 Найдено результатов: {num_found}')
                 results = data.get('result', [])
-                print(f'1 results: {results}')
+                # print(f'1 results: {results}')
 
         # Выполняем поиск по фамилии и pmid
         if not results or num_found !=1 and pmid:
             if doi and pmid:
                 search_url = f"{base_url}/search/?q=family-name:{last_name.strip()}+AND+pmid-self:{pmid.strip()}"
-                print(f'2 search_url: {search_url}')
+                # print(f'2 search_url: {search_url}')
 
                 time.sleep(2)
                 response = requests.get(search_url, headers=headers)
@@ -875,17 +875,17 @@ def find_orcid(last_name: str, doi: str | None = None, pmid: str | None = None) 
 
                 if data:
                     num_found = data.get('num-found', 0)
-                    print(f'2 Найдено результатов: {num_found}')
+                    # print(f'2 Найдено результатов: {num_found}')
                     results = data.get('result', [])
-                    print(f'2 results: {results}')
+                    # print(f'2 results: {results}')
 
         # Получаем все данные для orcid_id
         if results and num_found == 1:
             orcid_id = results[0].get('orcid-identifier', {}).get('path')
-            print(f'orcid_id: {orcid_id}')
+            # print(f'orcid_id: {orcid_id}')
             if orcid_id:
                 orcid_url = f"{base_url}/{orcid_id}"
-                print(f'orcid_url: {orcid_url}')
+                # print(f'orcid_url: {orcid_url}')
                 try:
                     time.sleep(2)
                     orcid_response = requests.get(orcid_url, headers=headers)

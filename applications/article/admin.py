@@ -95,13 +95,13 @@ class ArticleAuthorAdmin(admin.ModelAdmin):
     list_display = ['pk', 'author', 'article']
 
 
-class ArticleAdminForm(forms.ModelForm):
-    class Meta:
-        model = Article
-        fields = '__all__'
-        widgets = {
-            'structured_content': forms.Textarea(attrs={'rows': 20, 'cols': 70}),
-        }
+# class ArticleAdminForm(forms.ModelForm):
+#     class Meta:
+#         model = Article
+#         fields = '__all__'
+#         widgets = {
+#             'structured_content': forms.Textarea(attrs={'rows': 20, 'cols': 70}),
+#         }
 
 
 @admin.register(Article)
@@ -114,21 +114,21 @@ class ArticleAdmin(SortableAdminBase, admin.ModelAdmin):
         'pmc_id_label',
         'arxiv_id',
         'reference_link_inline_count',
-        'is_structured_content',
+        # 'is_structured_content',
         'is_pdf_file',
         # 'best_oa_pdf_url',
         'get_users',
         'primary_source_api_label',
         'publication_date',
-        'is_manually_added_full_text',
+        # 'is_manually_added_full_text',
         'updated_at'
     )
-    list_filter = ('publication_date', 'primary_source_api', 'is_manually_added_full_text')
+    list_filter = ['publication_date', 'primary_source_api'] # 'is_manually_added_full_text'
     search_fields = ('title', 'doi', 'pubmed_id', 'pmc_id', 'arxiv_id', 'abstract', 'authors__full_name')
     readonly_fields = ('created_at', 'updated_at')
     # autocomplete_fields = ['user']
     inlines = [ArticleUserInline, ArticleAuthorInline, ArticleContentInline, ReferenceLinkInline]
-    form = ArticleAdminForm
+    # form = ArticleAdminForm
 
     fieldsets = (
         (None, {
@@ -137,12 +137,12 @@ class ArticleAdmin(SortableAdminBase, admin.ModelAdmin):
         ('Идентификаторы и Источники', {
             'fields': ('doi', 'pubmed_id', 'pmc_id', 'arxiv_id', 'primary_source_api')
         }),
-        ('Структурированное содержимое', {
-            'fields': ('structured_content',)
-        }),
-        ('Данные для LLM и Ручной Ввод', {
-            'fields': ('cleaned_text_for_llm', 'is_manually_added_full_text')
-        }),
+        # ('Структурированное содержимое', {
+        #     'fields': ('structured_content',)
+        # }),
+        # ('Данные для LLM и Ручной Ввод', {
+        #     'fields': ('cleaned_text_for_llm',) # 'is_manually_added_full_text')
+        # }),
         ('PDF Файл', {
             'fields': ('pdf_url', 'pdf_file', 'pdf_text')
         }),
@@ -165,11 +165,11 @@ class ArticleAdmin(SortableAdminBase, admin.ModelAdmin):
         return format_html('<span style="color: red;">&#10007;</span>')
     is_pdf_file.short_description = 'PDF'
 
-    def is_structured_content(self, obj):
-        if obj.structured_content:
-            return format_html('<span style="color: green;">&#10003;</span>')
-        return format_html('<span style="color: red;">&#10007;</span>')
-    is_structured_content.short_description = 'XML'
+    # def is_structured_content(self, obj):
+    #     if obj.structured_content:
+    #         return format_html('<span style="color: green;">&#10003;</span>')
+    #     return format_html('<span style="color: red;">&#10007;</span>')
+    # is_structured_content.short_description = 'XML'
 
     def pmc_id_label(self, obj):
         return obj.pmc_id
@@ -190,6 +190,57 @@ class AnalyzedSegmentAdmin(admin.ModelAdmin):
     search_fields = ['article']
 
 
+class ArticleUserAdminForm(forms.ModelForm):
+    class Meta:
+        model = ArticleUser
+        fields = '__all__'
+        widgets = {
+            'structured_content': forms.Textarea(attrs={'rows': 20, 'cols': 80}),
+            'cleaned_text_for_llm': forms.Textarea(attrs={'rows': 20, 'cols': 80}),
+        }
+
+
 @admin.register(ArticleUser)
 class ArticleUserAdmin(admin.ModelAdmin):
-    list_display = ['pk', 'user', 'article']
+    list_display = [
+        'pk',
+        'is_structured_content',
+        'is_llm_content',
+        'user',
+        'article_label',
+        'primary_source_api_label',
+        'is_manually_added_full_text',
+        'updated_at',
+    ]
+    form = ArticleUserAdminForm
+
+    def is_structured_content(self, obj):
+        if obj.structured_content:
+            return format_html('<span style="color: green;">&#10003;</span>')
+        return format_html('<span style="color: red;">&#10007;</span>')
+    is_structured_content.short_description = 'STRUCTURED'
+
+    def is_llm_content(self, obj):
+        if obj.cleaned_text_for_llm:
+            return format_html('<span style="color: green;">&#10003;</span>')
+        return format_html('<span style="color: red;">&#10007;</span>')
+    is_llm_content.short_description = 'LLM'
+
+    def primary_source_api_label(self, obj):
+        return obj.primary_source_api
+    primary_source_api_label.short_description = 'Источник'
+
+    def article_label(self, obj):
+        return f'{obj.article.title[:30]}...' if len(obj.article.title) > 30 else obj.article.title
+    article_label.short_description = 'Статья'
+
+
+@admin.register(ReferenceLink)
+class ReferenceLinkAdmin(admin.ModelAdmin):
+    list_display = ['id', 'source_article', 'target_article_doi', 'status', 'is_log_messages']
+
+    def is_log_messages(self, obj):
+        if obj.log_messages:
+            return format_html('<span style="color: green;">&#10003;</span>')
+        return format_html('<span style="color: red;">&#10007;</span>')
+    is_log_messages.short_description = 'IS LOG'

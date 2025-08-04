@@ -211,8 +211,9 @@ NCBI_API_KEY = os.getenv('SECRET_NCBI_API_KEY', '') # PubMed
 
 OPENAI_API_KEY = os.getenv('SECRET_OPENAI_API_KEY', '')
 OPENAI_DEFAULT_MODEL = "gpt-4o-mini"
-# LLM_PROVIDER_FOR_ANALYSIS = 'OpenAI' # 'Grok'
+# LLM_PROVIDER_FOR_ANALYSIS = 'Grok' # 'OpenAI'
 LLM_PROVIDER_FOR_ANALYSIS = 'OpenAI' if os.getenv('SECRET_OPENAI_API_KEY', '') else 'Grok'
+GROK_HEADLESS_FOR_ANALYSIS = False  # Если False - браузер запускается в видимом режиме и это поможет обойти защиту от ботов
 
 
 API_SOURCE_NAMES = {

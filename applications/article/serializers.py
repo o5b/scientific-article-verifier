@@ -38,8 +38,10 @@ class ReferenceLinkSerializer(serializers.ModelSerializer):
             'manual_data_json', 'status', 'log_messages', 'created_at', 'updated_at'
         ]
         read_only_fields = (
-            'created_at', 'updated_at',
-            'source_article_title', 'resolved_article_title',
+            'created_at',
+            'updated_at',
+            'source_article_title',
+            'resolved_article_title',
             'resolved_article', # resolved_article по-прежнему обновляется только системой
             'log_messages'
         )
@@ -147,7 +149,7 @@ class ArticleSerializer(serializers.ModelSerializer):
         model = Article
         fields = [
             'id', 'users', 'user_ids', 'title', 'abstract', 'doi', 'pubmed_id', 'arxiv_id',
-            'cleaned_text_for_llm', 'is_manually_added_full_text',
+            # 'cleaned_text_for_llm', # 'is_manually_added_full_text',
             'primary_source_api', 'publication_date', 'journal_name',
             'oa_status', 'best_oa_url', 'best_oa_pdf_url', 'oa_license',
             'is_user_initiated',
@@ -156,7 +158,7 @@ class ArticleSerializer(serializers.ModelSerializer):
             'contents', 'references_made',
             'created_at', 'updated_at'
         ]
-        read_only_fields = ('created_at', 'updated_at', 'users', 'cleaned_text_for_llm')
+        read_only_fields = ('created_at', 'updated_at', 'users') #, 'cleaned_text_for_llm')
 
     def create(self, validated_data):
         user_ids = validated_data.pop('user_ids', [])
@@ -251,3 +253,29 @@ class AnalyzedSegmentSerializer(serializers.ModelSerializer):
         if cited_references_data is not None: # Если передали пустой список - очистим, если передали данные - установим
             instance.cited_references.set(cited_references_data)
         return instance
+
+
+class ArticleUserSerializer(serializers.ModelSerializer):
+    """Сериализатор для модели ArticleUser."""
+    user = serializers.PrimaryKeyRelatedField(queryset=User.objects.all(), required=False)
+    article = serializers.PrimaryKeyRelatedField(queryset=Article.objects.all())
+
+    class Meta:
+        model = ArticleUser
+        fields = [
+            'id',
+            'user',
+            'article',
+            'structured_content',
+            'cleaned_text_for_llm',
+            'primary_source_api',
+            'is_manually_added_full_text',
+            'created_at',
+            'updated_at',
+        ]
+        read_only_fields = ['cleaned_text_for_llm', 'created_at', 'updated_at']
+
+    def create(self, validated_data):
+        if 'user' not in validated_data:
+            validated_data['user'] = self.context['request'].user
+        return super().create(validated_data)
