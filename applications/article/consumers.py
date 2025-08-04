@@ -22,7 +22,7 @@ class NotificationConsumer(AsyncWebsocketConsumer):
             await self.accept()
             await self.send(text_data=json.dumps({
                 'type': 'connection_established',
-                'message': f'WebSocket-соединение установлено. Вы слушаете группу {self.group_name}.'
+                'message': f'A WebSocket connection is established. You are listening to a group {self.group_name}.'
             }))
 
     async def disconnect(self, close_code):
