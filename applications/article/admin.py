@@ -58,9 +58,9 @@ class ReferenceLinkInline(SortableStackedInline):
         formset = super().get_formset(request, obj, **kwargs)
         if obj:
             count = obj.references_made.count()
-            self.verbose_name_plural = f"Библиографические ссылки: {count}"
+            self.verbose_name_plural = f"Bibliographic references: {count}"
         else:
-            self.verbose_name_plural = "Библиографические ссылки"
+            self.verbose_name_plural = "Bibliographic references"
         return formset
 
     def reference_link_inline_count(self, obj):
@@ -134,7 +134,7 @@ class ArticleAdmin(SortableAdminBase, admin.ModelAdmin):
         (None, {
             'fields': ('title', 'abstract')
         }),
-        ('Идентификаторы и Источники', {
+        ('Identifiers and Sources', {
             'fields': ('doi', 'pubmed_id', 'pmc_id', 'arxiv_id', 'primary_source_api')
         }),
         # ('Структурированное содержимое', {
@@ -143,13 +143,13 @@ class ArticleAdmin(SortableAdminBase, admin.ModelAdmin):
         # ('Данные для LLM и Ручной Ввод', {
         #     'fields': ('cleaned_text_for_llm',) # 'is_manually_added_full_text')
         # }),
-        ('PDF Файл', {
+        ('PDF File', {
             'fields': ('pdf_url', 'pdf_file', 'pdf_text')
         }),
-        ('Метаданные Публикации', {
+        ('Publication Metadata', {
             'fields': ('publication_date', 'journal_name')
         }),
-        ('Даты', {
+        ('Dates', {
             'fields': ('created_at', 'updated_at'),
             'classes': ('collapse',)
         }),
@@ -177,7 +177,7 @@ class ArticleAdmin(SortableAdminBase, admin.ModelAdmin):
 
     def primary_source_api_label(self, obj):
         return obj.primary_source_api
-    primary_source_api_label.short_description = 'Источник'
+    primary_source_api_label.short_description = 'Source'
 
     def get_users(self, obj):
         return ", ".join([user.username for user in obj.users.all()])
@@ -228,11 +228,11 @@ class ArticleUserAdmin(admin.ModelAdmin):
 
     def primary_source_api_label(self, obj):
         return obj.primary_source_api
-    primary_source_api_label.short_description = 'Источник'
+    primary_source_api_label.short_description = 'Source'
 
     def article_label(self, obj):
         return f'{obj.article.title[:30]}...' if len(obj.article.title) > 30 else obj.article.title
-    article_label.short_description = 'Статья'
+    article_label.short_description = 'Article'
 
 
 @admin.register(ReferenceLink)

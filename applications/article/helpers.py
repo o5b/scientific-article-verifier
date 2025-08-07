@@ -837,12 +837,12 @@ def find_orcid(last_name: str, doi: str | None = None, pmid: str | None = None) 
         results = []
 
         if not last_name:
-            error_msg = "Отсутствует фамилия для поиска ORCID."
+            error_msg = "No last name available for ORCID search."
             print(error_msg)
             return {'status': 'error', 'message': error_msg}
 
         if not doi and not pmid:
-            error_msg = "Отсутствуют необходимые идентификаторы для поиска ORCID."
+            error_msg = "The required identifiers for ORCID search are missing."
             print(error_msg)
             return {'status': 'error', 'message': error_msg}
 
@@ -892,23 +892,23 @@ def find_orcid(last_name: str, doi: str | None = None, pmid: str | None = None) 
                     orcid_response.raise_for_status()
                     orcid_data = orcid_response.json()
                 except requests.exceptions.RequestException as e:
-                    error_msg = f"Ошибка при получении данных для ORCID {orcid_id}: {e}"
+                    error_msg = f"Error retrieving data for ORCID {orcid_id}: {e}"
                     print(error_msg)
                     return {'status': 'error', 'message': error_msg}
         else:
-            error_msg = f"Нет данных для ORCID {orcid_id}"
+            error_msg = f"No data for ORCID {orcid_id}"
             print(error_msg)
             return {'status': 'error', 'message': error_msg}
 
     except requests.exceptions.HTTPError as e:
         if e.response.status_code == 500:
-            error_msg = f"Сервер ORCID вернул ошибку 500 для запроса: {search_url}. Попробуйте позже."
+            error_msg = f"The ORCID server returned error 500 for request: {search_url}. Please try again later."
         else:
-            error_msg = f"Ошибка при выполнении запроса к ORCID API: {e}"
+            error_msg = f"Error while executing request to ORCID API: {e}"
         print(error_msg)
         return {'status': 'error', 'message': error_msg}
     except requests.exceptions.RequestException as e:
-        error_msg = f"Ошибка при выполнении запроса к ORCID API: {e}"
+        error_msg = f"Error while executing request to ORCID API: {e}"
         print(error_msg)
         return {'status': 'error', 'message': error_msg}
 

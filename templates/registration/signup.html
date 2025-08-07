@@ -2,7 +2,7 @@
 {% load static %}
 {% load i18n %}
 
-{% block title %}{% trans 'Регистрация' %}{% endblock %}
+{% block title %}{% trans 'Signup' %}{% endblock %}
 
 {% block content %}
     <style>
@@ -37,7 +37,7 @@
 
     <div class="container">
         <div class="login-form">
-            <h2 style="text-align: center;">{% trans 'Регистрация' %}</h2>
+            <h2 style="text-align: center;">{% trans 'Signup' %}</h2>
 
             <form method="post">
                 {% csrf_token %}
@@ -50,7 +50,7 @@
 
                 {% if form.errors %}
                     <div style="color:red; margin: 5px 0; text-align: center;">
-                        <p>{% trans 'Ошибка Регистрация.' %}</p>
+                        <p>{% trans 'Registration Error' %}</p>
 
                         {% for field, errors in form.errors.items %}
                             {% for error in errors %}
@@ -59,11 +59,11 @@
                             {% endfor %}
                         {% endfor %}
 
-                        <p>{% trans 'Пожалуйста, попробуйте еще раз.' %}</p>
+                        <p>{% trans 'Please try again.' %}</p>
                     </div>
                 {% endif %}
 
-                <button type="submit">{% trans 'Зарегистрироваться' %}</button>
+                <button type="submit">{% trans 'Register' %}</button>
             </form>
         </div>
     </div>

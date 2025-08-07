@@ -20,18 +20,6 @@ from .serializers import (
 from .tasks import analyze_segment_with_llm_task, find_doi_for_reference_task, process_article_pipeline_task
 
 
-# class IsOwnerOfSourceArticle(permissions.BasePermission):
-#     """
-#     Разрешение, которое позволяет изменять/удалять объект
-#     только если пользователь является владельцем исходной статьи.
-#     """
-#     def has_object_permission(self, request, view, obj):
-#         # Разрешения на чтение разрешены всем (например, GET, HEAD, OPTIONS)
-#         if request.method in permissions.SAFE_METHODS:
-#             return True
-#         # Разрешения на запись даются только владельцу исходной статьи
-#         return obj.source_article.user == request.user
-
 class IsOwnerOfSourceArticle(permissions.BasePermission):
     """
     Разрешение, которое позволяет изменять/удалять объект
@@ -134,10 +122,10 @@ class StartArticleProcessingView(View):
         identifier_type = request.GET.get('type', 'DOI').upper()
 
         if not identifier_value:
-            return JsonResponse({'error': 'Параметр "identifier" отсутствует'}, status=400)
+            return JsonResponse({'error': 'Parameter "identifier" is missing'}, status=400)
 
         if not request.user.is_authenticated:
-             return JsonResponse({'error': 'Пользователь не аутентифицирован'}, status=401)
+             return JsonResponse({'error': 'User not authenticated'}, status=401)
 
         # Запускаем диспетчерскую задачу
         task = process_article_pipeline_task.delay(
@@ -147,7 +135,7 @@ class StartArticleProcessingView(View):
         )
 
         return JsonResponse({
-            'message': f'Конвейер обработки для {identifier_type}:{identifier_value} запущен.',
+            'message': f'Processing pipeline for {identifier_type}:{identifier_value} started.',
             'pipeline_task_id': task.id # ID диспетчерской задачи
         })
 
@@ -162,19 +150,19 @@ class LoadReferencedArticleAPIView(APIView):
         # if reference_link.source_article.user != request.user:
         if not reference_link.source_article.users.filter(id=request.user.id).exists():
             return Response(
-                {"error": "У вас нет прав для выполнения этого действия."},
+                {"error": "You do not have permission to perform this action."},
                 status=status.HTTP_403_FORBIDDEN
             )
 
         if not reference_link.target_article_doi:
             return Response(
-                {"error": "DOI для цитируемой статьи не указан в этой ссылке."},
+                {"error": "The DOI for the cited article is not provided in this reference."},
                 status=status.HTTP_400_BAD_REQUEST
             )
 
         if reference_link.resolved_article:
             return Response(
-                {"info": "Эта ссылка уже связана с загруженной статьей.", "article_id": reference_link.resolved_article_id},
+                {"info": "This link is already associated with an uploaded article.", "article_id": reference_link.resolved_article_id},
                 status=status.HTTP_200_OK # Или 409 Conflict, если считать это ошибкой повторного запроса
             )
 
@@ -191,7 +179,7 @@ class LoadReferencedArticleAPIView(APIView):
         reference_link.save(update_fields=['status', 'updated_at'])
 
         return Response(
-            {"message": "Запрос на загрузку цитируемой статьи отправлен.", "task_id": pipeline_task.id},
+            {"message": "Request to download the cited article has been sent.", "task_id": pipeline_task.id},
             status=status.HTTP_202_ACCEPTED
         )
 
@@ -205,19 +193,19 @@ class FindDoiForReferenceAPIView(APIView):
         # if reference_link.source_article.user != request.user:
         if not reference_link.source_article.users.filter(id=request.user.id).exists():
             return Response(
-                {"error": "У вас нет прав для выполнения этого действия."},
+                {"error": "You do not have permission to perform this action."},
                 status=status.HTTP_403_FORBIDDEN
             )
 
         if reference_link.target_article_doi:
             return Response(
-                {"info": f"DOI ({reference_link.target_article_doi}) уже указан для этой ссылки."},
+                {"info": f"DOI ({reference_link.target_article_doi}) is already listed for this link."},
                 status=status.HTTP_400_BAD_REQUEST # Или 200 OK с info, если это не считать ошибкой
             )
 
         if not reference_link.raw_reference_text and not (reference_link.manual_data_json and reference_link.manual_data_json.get('title')):
             return Response(
-                {"error": "Недостаточно данных (текст ссылки или название) для поиска DOI."},
+                {"error": "Not enough data (link text or title) to search for DOI."},
                 status=status.HTTP_400_BAD_REQUEST
             )
 
@@ -230,7 +218,7 @@ class FindDoiForReferenceAPIView(APIView):
         reference_link.status = ReferenceLink.StatusChoices.DOI_LOOKUP_IN_PROGRESS # Если такой статус есть, или PENDING_DOI_INPUT
 
         return Response(
-            {"message": "Задача по поиску DOI для ссылки поставлена в очередь.", "task_id": task.id},
+            {"message": "The task to find the DOI for the link has been queued.", "task_id": task.id},
             status=status.HTTP_202_ACCEPTED
         )
 
@@ -244,7 +232,7 @@ class FindAllReferenceDoisAPIView(APIView):
         # if article.user != request.user:
         if not article.users.filter(id=request.user.id).exists():
             return Response(
-                {"error": "У вас нет прав для выполнения этого действия."},
+                {"error": "You do not have permission to perform this action."},
                 status=status.HTTP_403_FORBIDDEN
             )
 
@@ -273,7 +261,7 @@ class FindAllReferenceDoisAPIView(APIView):
 
         if not references_to_process.exists():
             return Response(
-                {"info": "Нет ссылок, требующих поиска DOI для этой статьи."},
+                {"info": "There are no references that require a DOI search for this article."},
                 status=status.HTTP_200_OK
             )
 
@@ -290,7 +278,7 @@ class FindAllReferenceDoisAPIView(APIView):
             tasks_queued_count += 1
 
         return Response(
-            {"message": f"Запущено {tasks_queued_count} задач по поиску DOI для ссылок."},
+            {"message": f"Running {tasks_queued_count} tasks to find DOIs for references."},
             status=status.HTTP_202_ACCEPTED
         )
 
@@ -304,7 +292,7 @@ class LoadAllLinkedReferencesAPIView(APIView):
         # if article.user != request.user:
         if not article.users.filter(id=request.user.id).exists():
             return Response(
-                {"error": "У вас нет прав для выполнения этого действия."},
+                {"error": "You do not have permission to perform this action."},
                 status=status.HTTP_403_FORBIDDEN
             )
 
@@ -326,7 +314,7 @@ class LoadAllLinkedReferencesAPIView(APIView):
 
         if not references_to_load.exists():
             return Response(
-                {"info": "Нет ссылок с DOI, ожидающих загрузки для этой статьи."},
+                {"info": "There are no DOI references awaiting download for this article."},
                 status=status.HTTP_200_OK
             )
 
@@ -345,7 +333,7 @@ class LoadAllLinkedReferencesAPIView(APIView):
                 tasks_queued_count += 1
 
         return Response(
-            {"message": f"Запущено {tasks_queued_count} задач по загрузке цитируемых статей."},
+            {"message": f"Running {tasks_queued_count} tasks for loading cited articles."},
             status=status.HTTP_202_ACCEPTED
         )
 
@@ -358,7 +346,7 @@ class ReprocessArticleAPIView(APIView):
 
         # if article.user != request.user:
         if not article.users.filter(id=request.user.id).exists():
-            return Response({"error": "У вас нет прав для выполнения этого действия."}, status=status.HTTP_403_FORBIDDEN)
+            return Response({"error": "You do not have permission to perform this action."}, status=status.HTTP_403_FORBIDDEN)
 
         # Определяем основной идентификатор для перезапуска. Приоритет DOI.
         identifier_value = None
@@ -377,7 +365,7 @@ class ReprocessArticleAPIView(APIView):
 
         if not identifier_value or not identifier_type:
             return Response(
-                {"error": "Не удалось определить основной идентификатор для переобработки статьи."},
+                {"error": "Unable to determine primary identifier for article reprocessing."},
                 status=status.HTTP_400_BAD_REQUEST
             )
 
@@ -392,7 +380,7 @@ class ReprocessArticleAPIView(APIView):
         )
 
         return Response(
-            {"message": f"Запрос на переобработку статьи '{article.title[:50]}...' отправлен.", "task_id": pipeline_task.id},
+            {"message": f"Request to reprocess article '{article.title[:50]}...' sent.", "task_id": pipeline_task.id},
             status=status.HTTP_202_ACCEPTED
         )
 
@@ -415,11 +403,11 @@ class AnalyzedSegmentViewSet(viewsets.ModelViewSet):
     def perform_create(self, serializer):
         article_id = self.request.data.get('article_id')
         if not article_id:
-            raise serializer.ValidationError({"article_id": "Это поле обязательно."})
+            raise serializer.ValidationError({"article_id": "This field is required."})
         try:
             article = Article.objects.get(pk=article_id, users=self.request.user)
         except Article.DoesNotExist:
-            raise serializer.ValidationError({"article_id": "Указанная статья не найдена или не принадлежит вам."})
+            raise serializer.ValidationError({"article_id": "The specified article was not found or does not belong to you."})
 
         serializer.save(user=self.request.user, article=article)
 
@@ -470,21 +458,21 @@ class RunLLMAnalysisForSegmentAPIView(APIView):
 
         # Проверка, что пользователь связан с статьёй, к которой относится сегмент
         if not segment.article.users.filter(id=request.user.id).exists():
-            return Response({"error": "У вас нет прав для анализа этого сегмента."}, status=status.HTTP_403_FORBIDDEN)
+            return Response({"error": "You do not have permission to analyze this segment."}, status=status.HTTP_403_FORBIDDEN)
 
         if not segment.segment_text:
-            return Response({"error": "Текст сегмента пуст."}, status=status.HTTP_400_BAD_REQUEST)
+            return Response({"error": "The segment text is empty."}, status=status.HTTP_400_BAD_REQUEST)
 
         # Запуск Celery-задачи
         llm_task = analyze_segment_with_llm_task.delay(analyzed_segment_id=segment.id, user_id=request.user.id)
 
         # Обновляем статус
-        segment.llm_analysis_notes = "LLM анализ запущен..."
+        segment.llm_analysis_notes = "LLM analysis started..."
         segment.llm_veracity_score = None
         segment.save(update_fields=['llm_analysis_notes', 'llm_veracity_score', 'updated_at'])
 
         return Response(
-            {"message": f"LLM анализ для сегмента ID {segment.id} поставлен в очередь.", "task_id": llm_task.id},
+            {"message": f"LLM analysis for segment ID {segment.id} has been queued.", "task_id": llm_task.id},
             status=status.HTTP_202_ACCEPTED
         )
 
@@ -521,5 +509,5 @@ class ArticleUserViewSet(viewsets.ModelViewSet):
 
     def perform_destroy(self, instance):
         if instance.user != self.request.user and not self.request.user.is_staff:
-            raise PermissionDenied("Вы не можете удалить эту запись.")
+            raise PermissionDenied("You cannot delete this entry.")
         instance.delete()

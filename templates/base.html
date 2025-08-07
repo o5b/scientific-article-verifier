@@ -8,7 +8,7 @@
     <link rel="preconnect" href="https://fonts.googleapis.com" />
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
     <link href="https://fonts.googleapis.com/css2?family=Open+Sans:ital,wght@0,300..800;1,300..800&display=swap" rel="stylesheet" />
-    <title>{% block title %} {% trans 'Приложение для проверки научных статей' %} {% endblock %}</title>
+    <title>{% block title %} {% trans 'Application for verification of scientific articles' %} {% endblock %}</title>
     <style>
       :root {
         --body-bg-color: #ffffff;
@@ -545,19 +545,18 @@
           <div class="header-row">
             <div class="header-left-side"></div>
             <div class="header-logo-wrap">
-              <a class="header-logo" href="/articles">{% trans 'Научные Статьи AI' %}</a>
+              <a class="header-logo" href="/articles">{% trans 'Scientific Articles AI' %}</a>
             </div>
             <div class="header-right-side">
               {% if user.is_authenticated %}
-              <!-- {% trans 'Привет,' %} -->
               <button class="profile-button" title="{{ user.username }}">{{ user.username|slice:":1" }}</button>
               <span>
                 <form id="logout-form" method="post" action="{% url 'logout' %}" style="display: none">{% csrf_token %}</form>
-                <a class="primary-button" href="#" onclick="document.getElementById('logout-form').submit(); return false;">{% trans 'Выйти' %}</a>
+                <a class="primary-button" href="#" onclick="document.getElementById('logout-form').submit(); return false;">{% trans 'Logout' %}</a>
               </span>
               {% else %}
-                <a class="primary-button" href="{% url 'login' %}">{% trans 'Войти' %}</a>
-                <a class="primary-button" href="{% url 'signup' %}">{% trans 'Регистрация' %}</a>
+                <a class="primary-button" href="{% url 'login' %}">{% trans 'Login' %}</a>
+                <a class="primary-button" href="{% url 'signup' %}">{% trans 'Signup' %}</a>
               {% endif %}
             </div>
           </div>
@@ -568,8 +567,8 @@
     <div class="header-row-full-width sticky">
       <div class="header-row">
         <nav class="header-nav">
-          <a targetName="articles" href="{% url 'article_list' %}">{% trans 'Мои статьи' %}</a>
-          <a targetName="add_article" href="{% url 'submit_article' %}">{% trans 'Добавить статью' %}</a>
+          <a targetName="articles" href="{% url 'article_list' %}">{% trans 'My articles' %}</a>
+          <a targetName="add_article" href="{% url 'submit_article' %}">{% trans 'Add article' %}</a>
         </nav>
       </div>
     </div>
